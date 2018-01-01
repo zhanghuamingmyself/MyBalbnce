@@ -3,8 +3,6 @@ package com.zhanghuaming.mybalbnce.serial;
 import android.util.Log;
 
 
-import com.zhanghuaming.mybalbnce.utils.SerialBack;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,11 +19,12 @@ public class UartClient {
     private InputStream is;
 
     static SerialBack mSerialBack;
+
     public static UartClient getInstance(SerialBack serialBack) {
 
         if (mUartClient == null) {
             mUartClient = new UartClient(serialBack);
-        }else {
+        } else {
             mSerialBack = serialBack;
         }
         return mUartClient;
@@ -79,7 +78,6 @@ public class UartClient {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    Log.d(TAG, "ret=");
                     int ret = is.read(buf);
                     Log.d(TAG, "ret=" + ret);
                     Log.i(TAG, "HEX:" + BufToHex(buf, index, ret));
@@ -106,12 +104,20 @@ public class UartClient {
                                     break;
                                 } else if (i == cache.length - 1) {
                                     cache = null;
+                                    break;
                                 }
                             }
+                            int beforeSize = cache.length;
+                            cache = caseWeight(cache);
+                            cache = caseNoPeople(cache);
+                            cache = caseAferSettingCloseTime(cache);
+                            cache = caseNowInSetting(cache);
+                            if (cache != null && cache.length == beforeSize) {
+                                byte[] temp = new byte[cache.length - 8];
+                                System.arraycopy(cache, 8, temp, 0, cache.length - 8);
+                                cache = temp;
+                            }
                         }
-                        cache = caseWeight(cache);
-                        cache = caseNoPeople(cache);
-                        cache = caseAferSettingCloseTime(cache);
                     } else {
                         //不会执行，read会一直阻塞
                         Log.d(TAG, "read from uart empty");
@@ -130,7 +136,7 @@ public class UartClient {
         }
     }
 
-    public byte[] caseWeight(byte[] cache){
+    public byte[] caseWeight(byte[] cache) {
         double result = -1;
         if (cache != null && cache.length >= 2 && IntToHex(cache[0]).equals("0xFF") && IntToHex(cache[1]).equals("0x0")) {
             if (cache.length == 8) {
@@ -149,16 +155,17 @@ public class UartClient {
                 cache = null;
             }
 
-            if(result == -1){
-                Log.i(TAG,"体重信息有错");
-            }else if(result ==0){
+            if (result == -1) {
+                Log.i(TAG, "体重信息有错");
+            } else if (result == 0) {
                 mSerialBack.sHavePeople();
-            }else {
+            } else {
                 mSerialBack.sHaveweight(result);
             }
         }
         return cache;
     }
+
     public double analysisWeight(byte[] buf) {//解析,需要判断是否为-1
         String resultString = "";
         double result;
@@ -171,7 +178,7 @@ public class UartClient {
         resultString += IntToHexNoHead(buf[6]);
 
         result = Double.parseDouble(resultString);
-        if( IntToHexNoHead(buf[7]).equals("FE")){
+        if (IntToHexNoHead(buf[7]).equals("FE")) {
             Log.i(TAG, "解析的结果为：" + result);
             return result;
         }
@@ -179,18 +186,18 @@ public class UartClient {
         return -1;
     }
 
-    public byte[] caseNoPeople(byte[] cache){
+    public byte[] caseNoPeople(byte[] cache) {
         double result = -1;
         if (cache != null && cache.length >= 2 && IntToHex(cache[0]).equals("0xFF") && IntToHex(cache[1]).equals("0x2")) {
             if (cache.length == 8) {
                 //逻辑操作
                 Log.i(TAG, "解析中");
-                if(IntToHex(cache[7]).equals("0xFE")){
+                if (IntToHex(cache[7]).equals("0xFE")) {
                     mSerialBack.sNoPeople();
                 }
                 cache = null;
             } else if (cache.length > 8) {
-                if(IntToHex(cache[7]).equals("0xFE")){
+                if (IntToHex(cache[7]).equals("0xFE")) {
                     mSerialBack.sNoPeople();
                 }
                 Log.i(TAG, "解析后有剩余" + (cache.length - 8));
@@ -205,18 +212,46 @@ public class UartClient {
         return cache;
     }
 
-    public byte[] caseAferSettingCloseTime(byte[] cache){
+
+    public byte[] caseNowInSetting(byte[] cache) {
+        double result = -1;
+        if (cache != null && cache.length >= 2 && IntToHex(cache[0]).equals("0xFF") && IntToHex(cache[1]).equals("0x9")) {
+            if (cache.length == 8) {
+                //逻辑操作
+                Log.i(TAG, "解析中");
+                if (IntToHex(cache[7]).equals("0xFE")) {
+                    mSerialBack.sInSetingCloseTime();
+                }
+                cache = null;
+            } else if (cache.length > 8) {
+                if (IntToHex(cache[7]).equals("0xFE")) {
+                    mSerialBack.sInSetingCloseTime();
+                }
+                Log.i(TAG, "解析后有剩余" + (cache.length - 8));
+                byte[] temp = new byte[cache.length - 8];
+                System.arraycopy(cache, 8, temp, 0, cache.length - 8);
+                cache = temp;
+            } else {
+                Log.i(TAG, "解析其他");
+                cache = null;
+            }
+        }
+        return cache;
+    }
+
+
+    public byte[] caseAferSettingCloseTime(byte[] cache) {
         double result = -1;
         if (cache != null && cache.length >= 2 && IntToHex(cache[0]).equals("0xFF") && IntToHex(cache[1]).equals("0x6")) {
             if (cache.length == 8) {
                 //逻辑操作
                 Log.i(TAG, "解析中");
-                if(IntToHex(cache[7]).equals("0xFE")){
+                if (IntToHex(cache[7]).equals("0xFE")) {
                     mSerialBack.sAfterSettingCloseTime();
                 }
                 cache = null;
             } else if (cache.length > 8) {
-                if(IntToHex(cache[7]).equals("0xFE")){
+                if (IntToHex(cache[7]).equals("0xFE")) {
                     mSerialBack.sAfterSettingCloseTime();
                 }
                 Log.i(TAG, "解析后有剩余" + (cache.length - 8));
@@ -230,6 +265,7 @@ public class UartClient {
         }
         return cache;
     }
+
     public void start() {
         Log.i(TAG, "UartKeyBoardClient start()");
         if (!isRunning) {

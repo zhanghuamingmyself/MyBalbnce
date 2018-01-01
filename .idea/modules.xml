@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/MyBalbnce.iml" filepath="$PROJECT_DIR$/MyBalbnce.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/upgrade/upgrade.iml" filepath="$PROJECT_DIR$/upgrade/upgrade.iml" />
     </modules>
   </component>
 </project>

@@ -79,6 +79,7 @@ public class MyApplication extends Application {
         super.onCreate();
         LocalHelper.initGPS(getApplicationContext());
         Fresco.initialize(this);
+        gson = new Gson();
         context = this;
         client = new OkHttpClient.Builder().build();
          UartClient client = UartClient.getInstance(null);//告诉底板收到认证码

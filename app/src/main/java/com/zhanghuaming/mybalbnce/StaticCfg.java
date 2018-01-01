@@ -13,6 +13,7 @@ public class StaticCfg {
     public static final String baseUrl = serviceIP+"api/";
     public static final String loginUrl = "login";
     public static final String sendWeightUrl = "UploadWeight";
+    public static final String getUpdateUrl = "UpdateBean";
     public static final int BAUDRATE = 115200;//串口波特率
     public static final String TTY_PATH = "/dev/ttyMT2";//串口位置;
 

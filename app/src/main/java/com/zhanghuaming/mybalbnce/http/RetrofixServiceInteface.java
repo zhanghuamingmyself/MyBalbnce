@@ -4,6 +4,7 @@ package com.zhanghuaming.mybalbnce.http;
 import com.zhanghuaming.mybalbnce.StaticCfg;
 import com.zhanghuaming.mybalbnce.bean.LoginBack;
 import com.zhanghuaming.mybalbnce.bean.SendWeightBack;
+import com.zhanghuaming.mybalbnce.bean.UpdateBean;
 
 import java.util.List;
 
@@ -30,4 +31,10 @@ public interface RetrofixServiceInteface {
     @FormUrlEncoded
     @POST(StaticCfg.sendWeightUrl)
     Observable<SendWeightBack> sendWeight(@Field("IotCardNumber") String number, @Field("weight") double weight);
+
+    @FormUrlEncoded
+    @POST(StaticCfg.getUpdateUrl)
+    Observable<UpdateBean> getUpdate(@Field("IotCardNumber") String iotCardNumber,
+                                     @Field("appName") String appName);
+
 }

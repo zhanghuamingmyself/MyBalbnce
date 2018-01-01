@@ -10,22 +10,10 @@ import com.google.gson.GsonBuilder;
 import com.zhanghuaming.mybalbnce.MyApplication;
 import com.zhanghuaming.mybalbnce.bean.LoginBack;
 import com.zhanghuaming.mybalbnce.bean.SendWeightBack;
+import com.zhanghuaming.mybalbnce.bean.UpdateBean;
 import com.zhanghuaming.mybalbnce.utils.MyLocationListener;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyStore;
-import java.security.SecureRandom;
-import java.security.cert.CertificateFactory;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
 
 
 import okhttp3.ResponseBody;
@@ -42,8 +30,9 @@ public class RetrofixHelper {
 
     private static final String TAG = RetrofixHelper.class.getSimpleName();
 
-
-
+    public static Observable<UpdateBean> getUpdate(String iotCardNumber, String appName) {
+        return MyApplication.getApplication().checkRetrofix().getUpdate(iotCardNumber,appName).subscribeOn(Schedulers.io());
+    }
 
     public static Observable<LoginBack> login(String username,double longitude,double latitude,String misi) {
         Log.i(TAG,"登录信息"+username+"---"+longitude+"---"+latitude+"---"+misi);

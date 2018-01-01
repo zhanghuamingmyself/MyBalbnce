@@ -12,23 +12,31 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bigkoo.convenientbanner.ConvenientBanner;
 import com.bigkoo.convenientbanner.holder.CBViewHolderCreator;
 import com.bigkoo.convenientbanner.listener.OnItemClickListener;
 import com.facebook.drawee.view.SimpleDraweeView;
 import com.zhanghuaming.mybalbnce.bean.LoginBack;
+import com.zhanghuaming.mybalbnce.bean.MyAppInfo;
 import com.zhanghuaming.mybalbnce.bean.SendWeightBack;
 import com.zhanghuaming.mybalbnce.http.RetrofixHelper;
 import com.zhanghuaming.mybalbnce.serial.UartClient;
 import com.zhanghuaming.mybalbnce.utils.BannerItem;
+import com.zhanghuaming.mybalbnce.utils.CommonUtils;
 import com.zhanghuaming.mybalbnce.utils.FrameAnimation;
 import com.zhanghuaming.mybalbnce.utils.LocalHelper;
+import com.zhanghuaming.mybalbnce.utils.MD5Util;
 import com.zhanghuaming.mybalbnce.utils.MySharedPreferences;
 import com.zhanghuaming.mybalbnce.utils.NetworkImageHolderView;
 import com.zhanghuaming.mybalbnce.utils.PhoneInfoUtils;
-import com.zhanghuaming.mybalbnce.utils.SerialBack;
+import com.zhanghuaming.mybalbnce.serial.SerialBack;
+import com.zhanghuaming.mybalbnce.utils.UpdateApk;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -41,6 +49,7 @@ import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 
 public class MainActivity extends Activity implements SerialBack {
@@ -48,9 +57,11 @@ public class MainActivity extends Activity implements SerialBack {
     private ImageView ivAnima;
     private SimpleDraweeView ivQRCode;
     private TextView tvAutoCode, tvTip1, tvTip2, tvCode, tvTime;
-    private FrameAnimation frameAnimation;
-    private boolean isLoging = false;
-    private UartClient client;
+    private FrameAnimation frameAnimation;//动态
+    private boolean isLoging = false;//是否登录
+    private UartClient client;//串口
+    private String doweTime;
+    private int stateNow = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,8 +79,8 @@ public class MainActivity extends Activity implements SerialBack {
                 | View.SYSTEM_UI_FLAG_IMMERSIVE);
         setContentView(R.layout.activity_main);
         initView();
-        client = UartClient.getInstance(this);
-        if (MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != null) {
+
+        if (MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != null&&MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) !="null" ) {
             Observable.timer(1, TimeUnit.SECONDS).map(new Func1<Long, Object>() {
                 @Override
                 public Object call(Long aLong) {
@@ -78,24 +89,37 @@ public class MainActivity extends Activity implements SerialBack {
                 }
             }).subscribe();
         } else {
+            Toast.makeText(MainActivity.this,"没有登录信息",Toast.LENGTH_SHORT).show();
             Intent i = new Intent(MainActivity.this, LoginActivity.class);
             startActivity(i);
+
             finish();
         }
+        checkUpdateService();
 
-        havePeople();
-        tvTime.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                sendWeight(182.16);
-                tvTime.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        backBegin();
-                    }
-                }, 6000 * 2);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        doweTime = MySharedPreferences.get(MainActivity.this, MySharedPreferences.DOWNTIME);
+        client = UartClient.getInstance(this);
+    }
+
+
+    void checkUpdateService() {
+        try {
+            boolean isRunning = CommonUtils.isServiceRunning(MainActivity.this, "com.eto.upgrade.UpdateService");
+            if (!isRunning) {
+                Intent in = new Intent();
+                in.setClassName("com.eto.upgrade", "com.eto.upgrade.UpdateService");
+                startService(in);
             }
-        }, 6000 * 2);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("MSG_CHECK_UPDATESERVICE start fail");
+        }
     }
 
     void login() {
@@ -116,12 +140,14 @@ public class MainActivity extends Activity implements SerialBack {
                         LoginBack lb = MyApplication.getApplication().getGson().fromJson(lbString, LoginBack.class);
                         initShow(lb);
                     } else {
+                        Toast.makeText(MainActivity.this,"登录失败1",Toast.LENGTH_SHORT).show();
                         Intent i = new Intent(MainActivity.this, LoginActivity.class);
                         startActivity(i);
                         finish();
                     }
                 } catch (Exception ee) {
                     ee.printStackTrace();
+                    Toast.makeText(MainActivity.this,"登录失败2",Toast.LENGTH_SHORT).show();
                     Intent i = new Intent(MainActivity.this, LoginActivity.class);
                     startActivity(i);
                     finish();
@@ -172,12 +198,15 @@ public class MainActivity extends Activity implements SerialBack {
     }
 
     void havePeople() {
+        stateNow = SerialBack.sISHAVINGPEOPLE;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 frameAnimation = new FrameAnimation(ivAnima, getRes(), 500, true);
                 // SoundUtils soundUtils = SoundUtils.getInstance();
                 //soundUtils.playSound();//播放声音
+                tvAutoCode.setVisibility(View.INVISIBLE);
+                ivQRCode.setVisibility(View.VISIBLE);
                 tvTip1.setText("正在测量中");
                 tvTip2.setText("请保持平衡");
             }
@@ -186,11 +215,23 @@ public class MainActivity extends Activity implements SerialBack {
 
 
     void sendWeight(double weight) {
+        stateNow = SerialBack.sISHAVINGWEIGHT;
+        byte[] buf = new byte[8];
+        buf[0] = (byte) 0XFF;
+        buf[1] = (byte) 0X03;
+        buf[2] = (byte) 0X00;
+        buf[3] = (byte) 0X00;
+        buf[4] = (byte) 0X00;
+        buf[5] = (byte) 0X00;
+        buf[6] = (byte) 0X00;
+        buf[7] = (byte) 0XFE;
+        client.sendMsg(buf);
         Observable<SendWeightBack> back = RetrofixHelper.sendWeight(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), weight);
         back.doOnNext(new Action1<SendWeightBack>() {
             @Override
             public void call(SendWeightBack responseBody) {
-
+                // SoundUtils soundUtils = SoundUtils.getInstance();
+                //soundUtils.playSound();//播放声音
                 byte[] buf = new byte[8];
                 buf[0] = (byte) 0XFF;
                 buf[1] = (byte) 0X01;
@@ -201,6 +242,7 @@ public class MainActivity extends Activity implements SerialBack {
                 buf[6] = (byte) 0X00;
                 buf[7] = (byte) 0XFE;
                 client.sendMsg(buf);
+
             }
         }).observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<SendWeightBack>() {
             @Override
@@ -222,9 +264,8 @@ public class MainActivity extends Activity implements SerialBack {
     }
 
     void sendWeightBack(String autoCode) {//发送体重信息到服务器后返回
-        // SoundUtils soundUtils = SoundUtils.getInstance();
-        //soundUtils.playSound();//播放声音
-        if (!frameAnimation.isPause()) {
+        stateNow = SerialBack.sISSHOWINGAUTOCODE;
+        if (frameAnimation != null && !frameAnimation.isPause()) {
             frameAnimation.pauseAnimation();
             frameAnimation.release();
             frameAnimation = null;
@@ -237,10 +278,11 @@ public class MainActivity extends Activity implements SerialBack {
     }
 
     void backBegin() {//恢复没人界面
+        stateNow = 0;
         tvTip2.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (frameAnimation!= null &&!frameAnimation.isPause()) {
+                if (frameAnimation != null && !frameAnimation.isPause()) {
                     frameAnimation.pauseAnimation();
                     frameAnimation.release();
                     frameAnimation = null;
@@ -256,6 +298,25 @@ public class MainActivity extends Activity implements SerialBack {
     void initView() {
         convenientBanner = (ConvenientBanner) findViewById(R.id.convenientBanner);
         ivAnima = (ImageView) findViewById(R.id.iv_anima);
+        ivAnima.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Update.sendMsg(MainActivity.this,"xxxxx");
+                havePeople();
+                tvTime.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        sendWeight(182.16);
+                        tvTime.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                backBegin();
+                            }
+                        }, 6000 * 2);
+                    }
+                }, 6000 * 2);
+            }
+        });
         ivQRCode = (SimpleDraweeView) findViewById(R.id.iv_qrcode);
         tvAutoCode = (TextView) findViewById(R.id.tv_authcode);
         tvTip1 = (TextView) findViewById(R.id.tv_tip1);
@@ -313,8 +374,33 @@ public class MainActivity extends Activity implements SerialBack {
         return resId;
     }
 
+    private int stateTITO = 0;//状态计数
+    private int localState = 0;//保存状态
+
     void beginTimeShow() {
-        Observable.interval(0, 1, TimeUnit.MINUTES)
+        Observable.interval(0, 1, TimeUnit.SECONDS)//
+                .observeOn(Schedulers.newThread())
+                .subscribe(new Action1<Long>() {
+                    @Override
+                    public void call(Long aLong) {
+                        if (stateTITO == 0) {
+                            localState = stateNow;
+                        }
+
+                        if (stateNow == localState && stateNow != 0) {
+                            if (stateTITO <= 30) {
+                                stateTITO++;
+                            } else {
+                                stateTITO = 0;
+                                localState = 0;
+                                backBegin();
+                            }
+                        } else {
+                            stateTITO = 0;
+                        }
+                    }
+                });
+        Observable.interval(0, 1, TimeUnit.MINUTES)//时间显示，关机，重新登录
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Long>() {
                     @Override
@@ -325,6 +411,22 @@ public class MainActivity extends Activity implements SerialBack {
                         Date dNow = new Date();
                         SimpleDateFormat ft = new SimpleDateFormat("yyyy/MM/dd ' ' HH:mm");
                         tvTime.setText("" + ft.format(dNow));
+                        SimpleDateFormat ftd = new SimpleDateFormat("HH:mm");
+                        if (ftd.format(dNow).equals(doweTime)) {
+                            Log.i(TAG, "匹配");
+                            byte[] buf = new byte[8];
+                            buf[0] = (byte) 0XFF;
+                            buf[1] = (byte) 0X08;
+                            buf[2] = (byte) 0X00;
+                            buf[3] = (byte) 0X00;
+                            buf[4] = (byte) 0X00;
+                            buf[5] = (byte) 0X00;
+                            buf[6] = (byte) 0X00;
+                            buf[7] = (byte) 0XFE;
+                            client.sendMsg(buf);
+                        } else {
+                            Log.i(TAG, "" + ftd.format(dNow) + "------" + doweTime);
+                        }
                     }
                 });
     }
@@ -337,21 +439,12 @@ public class MainActivity extends Activity implements SerialBack {
 
     @Override
     public void sHaveweight(double weight) {
-        byte[] buf = new byte[8];
-        buf[0] = (byte) 0XFF;
-        buf[1] = (byte) 0X03;
-        buf[2] = (byte) 0X00;
-        buf[3] = (byte) 0X00;
-        buf[4] = (byte) 0X00;
-        buf[5] = (byte) 0X00;
-        buf[6] = (byte) 0X00;
-        buf[7] = (byte) 0XFE;
-        client.sendMsg(buf);
         sendWeight(weight);
     }
 
     @Override
     public void sNoPeople() {
+        stateNow = 0;
         backBegin();
     }
 
@@ -359,4 +452,11 @@ public class MainActivity extends Activity implements SerialBack {
     public void sAfterSettingCloseTime() {
 
     }
+
+    @Override
+    public void sInSetingCloseTime() {
+
+    }
+
+
 }

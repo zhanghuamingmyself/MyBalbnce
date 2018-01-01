@@ -16,10 +16,11 @@ public class MySharedPreferences {
     public static final String DevCode = "username";
     public static final String PASSWORD = "password";
     public static final String NUMBER = "number";//设备编号
+    public static final String DOWNTIME = "downtime";
 
      public static void save(Context context,String key,String value){
 
-         SharedPreferences preferences = context.getApplicationContext().getSharedPreferences("save", Context.MODE_PRIVATE);
+         SharedPreferences preferences = context.getApplicationContext().getSharedPreferences(null, Context.MODE_PRIVATE);
          SharedPreferences.Editor editor = preferences.edit();
          editor.putString(key, value);
          editor.commit();
@@ -27,7 +28,7 @@ public class MySharedPreferences {
     }
 
     public static String  get(Context context,String key){
-        SharedPreferences read = context.getApplicationContext().getSharedPreferences("save", Context.MODE_PRIVATE);
+        SharedPreferences read = context.getApplicationContext().getSharedPreferences(null, Context.MODE_PRIVATE);
 
         //步骤2：获取文件中的值
         String value = read.getString(key, "");
