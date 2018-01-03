@@ -1,7 +1,9 @@
 package com.zhanghuaming.mybalbnce;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -11,10 +13,14 @@ import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
+import com.zhanghuaming.mybalbnce.bean.MyAppInfo;
 import com.zhanghuaming.mybalbnce.serial.UartClient;
 import com.zhanghuaming.mybalbnce.utils.MySharedPreferences;
 import com.zhanghuaming.mybalbnce.serial.SerialBack;
+import com.zhanghuaming.mybalbnce.utils.PhoneInfoUtils;
+import com.zhanghuaming.mybalbnce.utils.UpdateApk;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Set;
@@ -32,7 +38,7 @@ import rx.schedulers.Schedulers;
 public class SettingActivity extends AppCompatActivity implements SerialBack {
 
     private static final String TAG = SettingActivity.class.getSimpleName();
-    private Button btnOut, btnTime,btnTest;
+    private Button btnOut, btnTime,btnTest,btnUpdate,btnLogin;
     private TimePicker timePickerDown, timePickerOpen;
     private UartClient client;
     private  Subscriber subscriber;
@@ -95,9 +101,8 @@ public class SettingActivity extends AppCompatActivity implements SerialBack {
         btnOut.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent i = new Intent(SettingActivity.this, LoginActivity.class);
-                startActivity(i);
-                finish();
+                Intent intent =  new Intent(Settings.ACTION_SETTINGS);
+                startActivity(intent);
             }
         });
         btnTest = (Button) findViewById(R.id.btn_test);
@@ -106,6 +111,34 @@ public class SettingActivity extends AppCompatActivity implements SerialBack {
             public void onClick(View view) {
                 Intent intent = new Intent(SettingActivity.this,MainActivity.class);
                 startActivity(intent);
+            }
+        });
+        btnUpdate = (Button)findViewById(R.id.btn_update);
+        btnUpdate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                firstUpgradeApk();
+            }
+        });
+        btnLogin = (Button) findViewById(R.id.btn_login);
+        btnLogin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+//                PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(LoginActivity.this);
+//                Toast.makeText(LoginActivity.this,"手机号码"+phoneInfoUtils.getPhoneInfo(),Toast.LENGTH_SHORT).show();
+                PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(SettingActivity.this);
+                MySharedPreferences.save(SettingActivity.this, MySharedPreferences.DevCode, phoneInfoUtils.getICCID().substring(0,phoneInfoUtils.getICCID().length() - 1));
+
+                byte[] buf = new byte[8];
+                buf[0] = (byte) 0XFF;
+                buf[1] = (byte) 0X04;
+                buf[2] = (byte) 0X00;
+                buf[3] = (byte) 0X00;
+                buf[4] = (byte) 0X00;
+                buf[5] = (byte) 0X00;
+                buf[6] = (byte) 0X00;
+                buf[7] = (byte) 0XFE;
+                client.sendMsg(buf);
             }
         });
     }
@@ -168,4 +201,19 @@ public class SettingActivity extends AppCompatActivity implements SerialBack {
         client.sendMsg(buf);
     }
 
+    void firstUpgradeApk() {
+        int apk_res_id = R.raw.upgrade_apk;
+        MyAppInfo info = UpdateApk.getAppInfo_ByPackageName(SettingActivity.this, "com.eto.upgrade");
+        if (info == null) {
+            install(apk_res_id);
+        }
+
+    }
+
+    void install(int apk_res_id) {
+        String path = UpdateApk.getRawFile(SettingActivity.this, apk_res_id);
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(Uri.fromFile(new File(path)), "application/vnd.android.package-archive");
+        startActivity(intent);
+    }
 }

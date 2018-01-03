@@ -1,4 +1,4 @@
-package com.zhanghuaming.mybalbnce.bean;
+package com.eto.upgrade.bean;
 
 
 public class UpdateBean {

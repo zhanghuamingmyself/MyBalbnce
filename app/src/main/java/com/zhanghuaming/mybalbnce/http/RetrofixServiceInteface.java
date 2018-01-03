@@ -26,7 +26,7 @@ public interface RetrofixServiceInteface {
     Observable<LoginBack> login(@Field("username") String username,
                                 @Field("longitude") double longitude,
                                 @Field("latitude") double latitude,
-                                @Field("misi") String misi);
+                                @Field("misi") String imsi);
 
     @FormUrlEncoded
     @POST(StaticCfg.sendWeightUrl)
@@ -34,7 +34,7 @@ public interface RetrofixServiceInteface {
 
     @FormUrlEncoded
     @POST(StaticCfg.getUpdateUrl)
-    Observable<UpdateBean> getUpdate(@Field("IotCardNumber") String iotCardNumber,
+    Observable<ResponseBody> getUpdate(@Field("IotCardNumber") String iotCardNumber,
                                      @Field("appName") String appName);
 
 }

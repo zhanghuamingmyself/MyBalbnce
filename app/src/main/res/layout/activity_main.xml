@@ -9,19 +9,20 @@
     tools:context="com.zhanghuaming.mybalbnce.MainActivity">
 
 
-        <com.bigkoo.convenientbanner.ConvenientBanner
-            android:id="@+id/convenientBanner"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="4"
-            android:background="@color/colorPrimary"
-            app:canLoop="true" />
+    <com.bigkoo.convenientbanner.ConvenientBanner
+        android:id="@+id/convenientBanner"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="4"
+        android:background="@color/colorPrimary"
+        app:canLoop="true" />
 
-        <LinearLayout
+    <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:background="#495286">
 
             <LinearLayout
                 android:orientation="vertical"
@@ -30,11 +31,12 @@
 
                 <!--<TextView-->
                     <!--android:layout_width="wrap_content"-->
-                    <!--android:layout_height="wrap_content"-->
-                    <!--android:layout_marginTop="12dp"-->
-                    <!--android:layout_gravity="center_horizontal"-->
-                    <!--android:text="测试更新"/>-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_marginTop="12dp"-->
+                <!--android:layout_gravity="center_horizontal"-->
+                <!--android:text="测试更新"/>-->
                 <TextView
+                    android:textColor="#5186F1"
                     android:id="@+id/tv_code"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -42,6 +44,7 @@
                     android:layout_gravity="center_horizontal"
                     android:text="设备号：xxxxxxxxxxx"/>
                 <TextView
+                    android:textColor="#5186F1"
                     android:id="@+id/tv_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -84,6 +87,16 @@
 
             </RelativeLayout>
 
+            <View
+                android:layout_marginTop="15dp"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:background="#FFF"></View>
+            <View
+                android:layout_marginTop="5dp"
+                android:layout_width="match_parent"
+                android:layout_height="2dp"
+                android:background="#FFF"></View>
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -91,6 +104,7 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:textColor="#FFF"
                     android:id="@+id/tv_tip1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -101,6 +115,7 @@
                     android:textSize="30sp" />
 
                 <TextView
+                    android:textColor="#FFF"
                     android:id="@+id/tv_tip2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -110,7 +125,16 @@
                     android:text="体重数据自己知"
                     android:textSize="30sp" />
             </LinearLayout>
-
+        <View
+            android:layout_marginBottom="5dp"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="#FFF"></View>
+        <View
+            android:layout_marginBottom="25dp"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="#FFF"></View>
         </LinearLayout>
 
 </LinearLayout>

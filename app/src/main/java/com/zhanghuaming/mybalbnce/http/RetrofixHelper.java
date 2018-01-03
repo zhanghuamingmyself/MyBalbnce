@@ -30,13 +30,13 @@ public class RetrofixHelper {
 
     private static final String TAG = RetrofixHelper.class.getSimpleName();
 
-    public static Observable<UpdateBean> getUpdate(String iotCardNumber, String appName) {
+    public static Observable<ResponseBody> getUpdate(String iotCardNumber, String appName) {
         return MyApplication.getApplication().checkRetrofix().getUpdate(iotCardNumber,appName).subscribeOn(Schedulers.io());
     }
 
-    public static Observable<LoginBack> login(String username,double longitude,double latitude,String misi) {
-        Log.i(TAG,"登录信息"+username+"---"+longitude+"---"+latitude+"---"+misi);
-        return MyApplication.getApplication().checkRetrofix().login(username,longitude,latitude,misi).subscribeOn(Schedulers.io());
+    public static Observable<LoginBack> login(String username,double longitude,double latitude,String imsi) {
+        Log.i(TAG,"登录信息"+username+"---"+longitude+"---"+latitude+"---"+imsi);
+        return MyApplication.getApplication().checkRetrofix().login(username,longitude,latitude,imsi).subscribeOn(Schedulers.io());
     }
 
     public static Observable<SendWeightBack> sendWeight(String number, double weight) {

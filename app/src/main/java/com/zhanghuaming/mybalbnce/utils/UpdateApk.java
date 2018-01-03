@@ -55,7 +55,7 @@ public class UpdateApk {
 	static  void showDialog_Update(final Context context,final UpdateBean soft) {
 
 
-		String msg = "新版本："+soft.object.versionName+"\n"+"更新信息\n"+soft.object.updateInfo;
+		String msg = "新版本："+soft.msg.versionName+"\n"+"更新信息\n"+soft.msg.updateInfo;
 		final AlertDialog.Builder builder = new AlertDialog.Builder(context);
 		builder.setTitle("升级提醒");
 		builder.setMessage(msg);
@@ -79,11 +79,11 @@ public class UpdateApk {
 		new Thread() {
 			public void run() {
 
-				String fileName = DownloadApk(soft.object.downloadUrl,soft.object.md5);
+				String fileName = DownloadApk(soft.msg.downloadUrl,soft.msg.md5);
 				try {
 					String fMd5 = MD5Util.fileMD5(fileName);
-					System.out.println("fmd5:"+fMd5+",webmd5:"+soft.object.md5);
-					if (fMd5.equalsIgnoreCase(soft.object.md5)) { //文件没有下载出错
+					System.out.println("fmd5:"+fMd5+",webmd5:"+soft.msg.md5);
+					if (fMd5.equalsIgnoreCase(soft.msg.md5)) { //文件没有下载出错
 
 
 							InstallApk.openFile(context, new File(fileName));

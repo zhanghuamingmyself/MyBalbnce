@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
+import okhttp3.ResponseBody;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
@@ -80,7 +81,7 @@ public class MainActivity extends Activity implements SerialBack {
         setContentView(R.layout.activity_main);
         initView();
 
-        if (MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != null&&MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) !="null" ) {
+        if (MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != null && MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != "null") {
             Observable.timer(1, TimeUnit.SECONDS).map(new Func1<Long, Object>() {
                 @Override
                 public Object call(Long aLong) {
@@ -89,8 +90,8 @@ public class MainActivity extends Activity implements SerialBack {
                 }
             }).subscribe();
         } else {
-            Toast.makeText(MainActivity.this,"没有登录信息",Toast.LENGTH_SHORT).show();
-            Intent i = new Intent(MainActivity.this, LoginActivity.class);
+            Toast.makeText(MainActivity.this, "没有登录信息", Toast.LENGTH_SHORT).show();
+            Intent i = new Intent(MainActivity.this, SettingActivity.class);
             startActivity(i);
 
             finish();
@@ -124,7 +125,8 @@ public class MainActivity extends Activity implements SerialBack {
 
     void login() {
         PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(MainActivity.this);
-        Observable<LoginBack> back = RetrofixHelper.login(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), StaticCfg.longitude, StaticCfg.latitude, phoneInfoUtils.getMISI());
+        Log.e(TAG, "手机信息" + "----" + phoneInfoUtils.getProvidersName() + "----" + phoneInfoUtils.getPhoneInfo() + "-----" + phoneInfoUtils.getIccid());
+        Observable<LoginBack> back = RetrofixHelper.login(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), StaticCfg.longitude, StaticCfg.latitude, phoneInfoUtils.getIMSI());
         back.observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<LoginBack>() {
             @Override
             public void onCompleted() {
@@ -140,15 +142,15 @@ public class MainActivity extends Activity implements SerialBack {
                         LoginBack lb = MyApplication.getApplication().getGson().fromJson(lbString, LoginBack.class);
                         initShow(lb);
                     } else {
-                        Toast.makeText(MainActivity.this,"登录失败1",Toast.LENGTH_SHORT).show();
-                        Intent i = new Intent(MainActivity.this, LoginActivity.class);
+                        Toast.makeText(MainActivity.this, "登录失败1", Toast.LENGTH_SHORT).show();
+                        Intent i = new Intent(MainActivity.this, SettingActivity.class);
                         startActivity(i);
                         finish();
                     }
                 } catch (Exception ee) {
                     ee.printStackTrace();
-                    Toast.makeText(MainActivity.this,"登录失败2",Toast.LENGTH_SHORT).show();
-                    Intent i = new Intent(MainActivity.this, LoginActivity.class);
+                    Toast.makeText(MainActivity.this, "登录失败2", Toast.LENGTH_SHORT).show();
+                    Intent i = new Intent(MainActivity.this, SettingActivity.class);
                     startActivity(i);
                     finish();
                 }
@@ -172,13 +174,13 @@ public class MainActivity extends Activity implements SerialBack {
                             LoginBack lb = MyApplication.getApplication().getGson().fromJson(lbString, LoginBack.class);
                             initShow(lb);
                         } else {
-                            Intent i = new Intent(MainActivity.this, LoginActivity.class);
+                            Intent i = new Intent(MainActivity.this, SettingActivity.class);
                             startActivity(i);
                             finish();
                         }
                     } catch (Exception ee) {
                         ee.printStackTrace();
-                        Intent i = new Intent(MainActivity.this, LoginActivity.class);
+                        Intent i = new Intent(MainActivity.this, SettingActivity.class);
                         startActivity(i);
                         finish();
                     }
@@ -301,12 +303,11 @@ public class MainActivity extends Activity implements SerialBack {
         ivAnima.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Update.sendMsg(MainActivity.this,"xxxxx");
                 havePeople();
                 tvTime.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        sendWeight(182.16);
+                        sendWeight(82.16);
                         tvTime.postDelayed(new Runnable() {
                             @Override
                             public void run() {
@@ -326,9 +327,29 @@ public class MainActivity extends Activity implements SerialBack {
         ivQRCode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent i = new Intent(MainActivity.this, LoginActivity.class);
-                startActivity(i);
-                finish();
+                Observable<ResponseBody> back = RetrofixHelper.getUpdate(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), UpdateApk.getAppInfo_BySelf(MainActivity.this).appName);
+                back.subscribe(new Subscriber<ResponseBody>() {
+                    @Override
+                    public void onCompleted() {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onNext(ResponseBody responseBody) {
+                        try {
+                            String s = responseBody.string();
+                            Log.i(TAG,"responBody for update ----"+s);
+                            Update.sendMsg(MainActivity.this,s);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
             }
         });
     }

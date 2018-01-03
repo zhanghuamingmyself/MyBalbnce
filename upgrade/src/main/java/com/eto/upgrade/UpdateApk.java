@@ -34,24 +34,28 @@ public class UpdateApk {
 
     static String _dirName = Environment.getExternalStorageDirectory() + "/" + Environment.DIRECTORY_DOWNLOADS;
     static boolean _isDown = false;
+    static boolean needInstall = false;
 
     public static void DownloadAndUpdate(final Context context, final UpdateBean soft) {
         _isDown = true;
         new Thread() {
             public void run() {
 
-                String fileName = DownloadApk(soft.object.downloadUrl, soft.object.md5);
+                String fileName = DownloadApk(soft.msg.downloadUrl, soft.msg.md5);
                 try {
                     String fMd5 = MD5Util.fileMD5(fileName);
-                    System.out.println("fmd5:" + fMd5 + ",webmd5:" + soft.object.md5);
-                    if (fMd5.equalsIgnoreCase(soft.object.md5)) { //文件没有下载出错
-                        if(new File("/system/bin/su").exists()||new File("/system/xbin/su").exists()){
-                            InstallApk.begin_install(fileName);
-                        }else {
-                            InstallApk.openFile(context, new File(fileName));
+                    System.out.println("fmd5:" + fMd5 + ",webmd5:" + soft.msg.md5);
+                    if (needInstall) {
+                        if (fMd5.equalsIgnoreCase(soft.msg.md5)) { //文件没有下载出错
+                            if (new File("/system/bin/su").exists() || new File("/system/xbin/su").exists()) {
+                                InstallApk.begin_install(fileName);
+                            } else {
+                                InstallApk.openFile(context, new File(fileName));
+                            }
+                        } else {
+                            myToast(context, "下载文件出错，md5校验失败！");
                         }
-                    } else {
-                        myToast(context, "下载文件出错，md5校验失败！");
+                        needInstall = false;
                     }
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
@@ -64,7 +68,7 @@ public class UpdateApk {
 
 
     static String DownloadApk(String _urlStr, String md5) {
-        String newFilename = _urlStr.substring(_urlStr.lastIndexOf("/") + 1).replace("findbypath.do?path=","");
+        String newFilename = _urlStr.substring(_urlStr.lastIndexOf("/") + 1).replace("findbypath.do?path=", "");
         newFilename = _dirName + "/" + newFilename;
         File file = new File(newFilename);
         //如果目标文件已经存在，则删除。产生覆盖旧文件的效果
@@ -72,6 +76,7 @@ public class UpdateApk {
             try {
                 String fmd5 = MD5Util.fileMD5(new FileInputStream(file));  //不重复下载
                 if (md5.equalsIgnoreCase(fmd5)) {
+                    needInstall = false;
                     return newFilename;
                 }
             } catch (IOException e) {
@@ -114,6 +119,7 @@ public class UpdateApk {
             e.printStackTrace();
         }
         _isDown = false;
+        needInstall = true;
         return newFilename;
     }
 
