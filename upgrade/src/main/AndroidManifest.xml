@@ -47,7 +47,8 @@
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".receiver.UpdateReceiver">
+        <receiver android:name=".receiver.UpdateReceiver"
+            android:exported="true">
             <intent-filter>
                 <action android:name="com.zhanghuaming.upgrade.Update" />
             </intent-filter>

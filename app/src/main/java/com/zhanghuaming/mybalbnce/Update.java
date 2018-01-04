@@ -32,6 +32,7 @@ public class Update {
         Log.i(TAG,"send bean----"+beanJson);
         intent.putExtra("updatePackageName", updatePackageName);
         intent.putExtra("updateActivityName", updateActivityName);
+        intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
         context.sendBroadcast(intent);
     }
 }

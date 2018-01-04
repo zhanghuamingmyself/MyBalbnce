@@ -29,6 +29,7 @@ import com.zhanghuaming.mybalbnce.utils.FrameAnimation;
 import com.zhanghuaming.mybalbnce.utils.LocalHelper;
 import com.zhanghuaming.mybalbnce.utils.MD5Util;
 import com.zhanghuaming.mybalbnce.utils.MySharedPreferences;
+import com.zhanghuaming.mybalbnce.utils.NetWorkBack;
 import com.zhanghuaming.mybalbnce.utils.NetworkImageHolderView;
 import com.zhanghuaming.mybalbnce.utils.PhoneInfoUtils;
 import com.zhanghuaming.mybalbnce.serial.SerialBack;
@@ -57,7 +58,7 @@ public class MainActivity extends Activity implements SerialBack {
     private static final String TAG = MainActivity.class.getSimpleName();
     private ImageView ivAnima;
     private SimpleDraweeView ivQRCode;
-    private TextView tvAutoCode, tvTip1, tvTip2, tvCode, tvTime;
+    private TextView tvAutoCode, tvTip1, tvTip2, tvCode, tvTime, tvNet;
     private FrameAnimation frameAnimation;//动态
     private boolean isLoging = false;//是否登录
     private UartClient client;//串口
@@ -80,15 +81,94 @@ public class MainActivity extends Activity implements SerialBack {
                 | View.SYSTEM_UI_FLAG_IMMERSIVE);
         setContentView(R.layout.activity_main);
         initView();
+        PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(MainActivity.this);
+        if (phoneInfoUtils.getIccid() != null) {
+            MySharedPreferences.save(MainActivity.this, MySharedPreferences.DevCode, phoneInfoUtils.getICCID().substring(0, phoneInfoUtils.getICCID().length() - 1));
+        }
+        if(RetrofixHelper.isNetworkConnected(MainActivity.this)){
+            login();
+            tvNet.setVisibility(View.VISIBLE);
+            tvNet.setText("当前已联网");
+        }
+        NetReceiver.setBack(new NetWorkBack() {
+            @Override
+            public void noNetwork() {
+                tvNet.setVisibility(View.VISIBLE);
+                tvNet.setText("当前无网络");
+            }
 
+            @Override
+            public void wifiConnected() {
+                tvNet.setVisibility(View.VISIBLE);
+                tvNet.setText("当前为wifi联网");
+                login();
+            }
+
+            @Override
+            public void mobileConnected() {
+                tvNet.setVisibility(View.VISIBLE);
+                tvNet.setText("当前为移动联网");
+                login();
+            }
+        });
+        try {
+            String lbString = MySharedPreferences.get(MainActivity.this, MySharedPreferences.LOGINBACK);
+            if (lbString != null) {
+                LoginBack lb = MyApplication.getApplication().getGson().fromJson(lbString, LoginBack.class);
+                initShow(lb);
+            }
+        } catch (Exception ee) {
+            ee.printStackTrace();
+        }
+
+    }
+
+    void login() {
         if (MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != null && MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != "null") {
-            Observable.timer(1, TimeUnit.SECONDS).map(new Func1<Long, Object>() {
+            PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(MainActivity.this);
+            Log.e(TAG, "手机信息" + "----" + phoneInfoUtils.getProvidersName() + "----" + phoneInfoUtils.getPhoneInfo() + "-----" + phoneInfoUtils.getIccid());
+            Observable<LoginBack> back = RetrofixHelper.login(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), StaticCfg.longitude, StaticCfg.latitude, phoneInfoUtils.getIMSI());
+            back.observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<LoginBack>() {
                 @Override
-                public Object call(Long aLong) {
-                    login();
-                    return null;
+                public void onCompleted() {
                 }
-            }).subscribe();
+
+                @Override
+                public void onError(Throwable e) {
+                    Log.e(TAG, e.getMessage());
+                }
+
+                @Override
+                public void onNext(LoginBack loginBack) {
+                    Log.i(TAG, "json---" + loginBack.toString());
+                    if (loginBack.getStatus() == 1) {
+                        isLoging = true;
+                        MySharedPreferences.save(MainActivity.this, MySharedPreferences.LOGINBACK, MyApplication.getApplication().getGson().toJson(loginBack));
+                        if (LocalHelper.mLocationClient.isStarted()) {
+                            LocalHelper.mLocationClient.stop();
+                        }
+                        initShow(loginBack);
+                    } else {
+                        try {
+                            String lbString = MySharedPreferences.get(MainActivity.this, MySharedPreferences.LOGINBACK);
+                            if (lbString != null) {
+                                LoginBack lb = MyApplication.getApplication().getGson().fromJson(lbString, LoginBack.class);
+                                initShow(lb);
+                            } else {
+                                Intent i = new Intent(MainActivity.this, SettingActivity.class);
+                                startActivity(i);
+                                finish();
+                            }
+                        } catch (Exception ee) {
+                            ee.printStackTrace();
+                            Intent i = new Intent(MainActivity.this, SettingActivity.class);
+                            startActivity(i);
+                            finish();
+                        }
+                    }
+                }
+            });
+
         } else {
             Toast.makeText(MainActivity.this, "没有登录信息", Toast.LENGTH_SHORT).show();
             Intent i = new Intent(MainActivity.this, SettingActivity.class);
@@ -97,7 +177,6 @@ public class MainActivity extends Activity implements SerialBack {
             finish();
         }
         checkUpdateService();
-
     }
 
     @Override
@@ -123,71 +202,6 @@ public class MainActivity extends Activity implements SerialBack {
         }
     }
 
-    void login() {
-        PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(MainActivity.this);
-        Log.e(TAG, "手机信息" + "----" + phoneInfoUtils.getProvidersName() + "----" + phoneInfoUtils.getPhoneInfo() + "-----" + phoneInfoUtils.getIccid());
-        Observable<LoginBack> back = RetrofixHelper.login(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), StaticCfg.longitude, StaticCfg.latitude, phoneInfoUtils.getIMSI());
-        back.observeOn(AndroidSchedulers.mainThread()).subscribe(new Subscriber<LoginBack>() {
-            @Override
-            public void onCompleted() {
-
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                Log.e(TAG, e.getMessage());
-                try {
-                    String lbString = MySharedPreferences.get(MainActivity.this, MySharedPreferences.LOGINBACK);
-                    if (lbString != null) {
-                        LoginBack lb = MyApplication.getApplication().getGson().fromJson(lbString, LoginBack.class);
-                        initShow(lb);
-                    } else {
-                        Toast.makeText(MainActivity.this, "登录失败1", Toast.LENGTH_SHORT).show();
-                        Intent i = new Intent(MainActivity.this, SettingActivity.class);
-                        startActivity(i);
-                        finish();
-                    }
-                } catch (Exception ee) {
-                    ee.printStackTrace();
-                    Toast.makeText(MainActivity.this, "登录失败2", Toast.LENGTH_SHORT).show();
-                    Intent i = new Intent(MainActivity.this, SettingActivity.class);
-                    startActivity(i);
-                    finish();
-                }
-
-            }
-
-            @Override
-            public void onNext(LoginBack loginBack) {
-                Log.i(TAG, "json---" + loginBack.toString());
-                if (loginBack.getStatus() == 1) {
-                    isLoging = true;
-                    MySharedPreferences.save(MainActivity.this, MySharedPreferences.LOGINBACK, MyApplication.getApplication().getGson().toJson(loginBack));
-                    if (LocalHelper.mLocationClient.isStarted()) {
-                        LocalHelper.mLocationClient.stop();
-                    }
-                    initShow(loginBack);
-                } else {
-                    try {
-                        String lbString = MySharedPreferences.get(MainActivity.this, MySharedPreferences.LOGINBACK);
-                        if (lbString != null) {
-                            LoginBack lb = MyApplication.getApplication().getGson().fromJson(lbString, LoginBack.class);
-                            initShow(lb);
-                        } else {
-                            Intent i = new Intent(MainActivity.this, SettingActivity.class);
-                            startActivity(i);
-                            finish();
-                        }
-                    } catch (Exception ee) {
-                        ee.printStackTrace();
-                        Intent i = new Intent(MainActivity.this, SettingActivity.class);
-                        startActivity(i);
-                        finish();
-                    }
-                }
-            }
-        });
-    }
 
     void initShow(LoginBack loginBack) {
         addWebPicture(loginBack.getMsg().getSlideshow());
@@ -343,8 +357,8 @@ public class MainActivity extends Activity implements SerialBack {
                     public void onNext(ResponseBody responseBody) {
                         try {
                             String s = responseBody.string();
-                            Log.i(TAG,"responBody for update ----"+s);
-                            Update.sendMsg(MainActivity.this,s);
+                            Log.i(TAG, "responBody for update ----" + s);
+                            Update.sendMsg(MainActivity.this, s);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -352,6 +366,7 @@ public class MainActivity extends Activity implements SerialBack {
                 });
             }
         });
+        tvNet = (TextView) findViewById(R.id.tv_net);
     }
 
     private ConvenientBanner convenientBanner;

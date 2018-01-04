@@ -35,6 +35,8 @@
                 <!--android:layout_marginTop="12dp"-->
                 <!--android:layout_gravity="center_horizontal"-->
                 <!--android:text="测试更新"/>-->
+
+
                 <TextView
                     android:textColor="#5186F1"
                     android:id="@+id/tv_code"
@@ -135,6 +137,16 @@
             android:layout_width="match_parent"
             android:layout_height="2dp"
             android:background="#FFF"></View>
+
+        <TextView
+            android:textColor="#5186F1"
+            android:id="@+id/tv_net"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:layout_gravity="center_horizontal"
+            android:text="网络状态"/>
         </LinearLayout>
 
 </LinearLayout>
