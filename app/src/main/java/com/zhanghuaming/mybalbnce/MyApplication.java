@@ -9,6 +9,7 @@ import com.google.gson.GsonBuilder;
 import com.zhanghuaming.mybalbnce.http.RetrofixHelper;
 import com.zhanghuaming.mybalbnce.http.RetrofixServiceInteface;
 import com.zhanghuaming.mybalbnce.serial.UartClient;
+import com.zhanghuaming.mybalbnce.serial.UartClientNew;
 import com.zhanghuaming.mybalbnce.utils.LocalHelper;
 
 import org.apache.http.conn.ssl.SSLSocketFactory;
@@ -82,7 +83,7 @@ public class MyApplication extends Application {
         gson = new Gson();
         context = this;
         client = new OkHttpClient.Builder().build();
-         UartClient client = UartClient.getInstance(null);//告诉底板收到认证码
-        client.start();//打开串口
+        // UartClientNew client = UartClientNew.getInstance(null);//告诉底板收到认证码
+        //client.start();//打开串口
     }
 }

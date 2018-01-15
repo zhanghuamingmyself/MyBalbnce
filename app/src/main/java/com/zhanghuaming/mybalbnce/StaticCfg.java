@@ -14,7 +14,8 @@ public class StaticCfg {
     public static final String loginUrl = "login";
     public static final String sendWeightUrl = "UploadWeight";
     public static final String getUpdateUrl = "UpdateBean";
-    public static final int BAUDRATE = 115200;//串口波特率
+    public static final int BAUDRATE = 9600;//集成串口波特率
+  //  public static final int BAUDRATE = 115200;//翔宇串口波特率
     public static final String TTY_PATH = "/dev/ttyMT2";//串口位置;
 
 

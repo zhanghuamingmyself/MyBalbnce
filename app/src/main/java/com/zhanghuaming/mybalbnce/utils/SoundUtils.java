@@ -23,7 +23,41 @@ public class SoundUtils {
 
     }
 
-    public void playSound() {
+    public void playFocusSound() {
+        try {
+            if (mPlayer == null) {
+                mPlayer = MediaPlayer.create(MyApplication.getApplication(), R.raw.dudu);//重新设置要播放的音频
+                mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mediaPlayer) {
+                        stopSound();
+                    }
+                });
+            }
+            mPlayer.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void playFatSound() {
+        try {
+            if (mPlayer == null) {
+                mPlayer = MediaPlayer.create(MyApplication.getApplication(), R.raw.dudu);//重新设置要播放的音频
+                mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                    @Override
+                    public void onCompletion(MediaPlayer mediaPlayer) {
+                        stopSound();
+                    }
+                });
+            }
+            mPlayer.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void playInputSound() {
         try {
             if (mPlayer == null) {
                 mPlayer = MediaPlayer.create(MyApplication.getApplication(), R.raw.dudu);//重新设置要播放的音频

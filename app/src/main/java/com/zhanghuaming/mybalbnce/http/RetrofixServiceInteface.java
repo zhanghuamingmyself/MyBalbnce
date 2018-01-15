@@ -30,11 +30,11 @@ public interface RetrofixServiceInteface {
 
     @FormUrlEncoded
     @POST(StaticCfg.sendWeightUrl)
-    Observable<SendWeightBack> sendWeight(@Field("IotCardNumber") String number, @Field("weight") double weight);
+    Observable<SendWeightBack> sendWeight(@Field("IotCardNumber") String number, @Field("weight") double weight, @Field("fat") double fat);
 
     @FormUrlEncoded
     @POST(StaticCfg.getUpdateUrl)
     Observable<ResponseBody> getUpdate(@Field("IotCardNumber") String iotCardNumber,
-                                     @Field("appName") String appName);
+                                       @Field("appName") String appName);
 
 }

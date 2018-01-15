@@ -19,51 +19,47 @@ import com.bigkoo.convenientbanner.holder.CBViewHolderCreator;
 import com.bigkoo.convenientbanner.listener.OnItemClickListener;
 import com.facebook.drawee.view.SimpleDraweeView;
 import com.zhanghuaming.mybalbnce.bean.LoginBack;
-import com.zhanghuaming.mybalbnce.bean.MyAppInfo;
 import com.zhanghuaming.mybalbnce.bean.SendWeightBack;
 import com.zhanghuaming.mybalbnce.http.RetrofixHelper;
 import com.zhanghuaming.mybalbnce.serial.UartClient;
+import com.zhanghuaming.mybalbnce.serial.UartClientNew;
 import com.zhanghuaming.mybalbnce.utils.BannerItem;
 import com.zhanghuaming.mybalbnce.utils.CommonUtils;
 import com.zhanghuaming.mybalbnce.utils.FrameAnimation;
 import com.zhanghuaming.mybalbnce.utils.LocalHelper;
-import com.zhanghuaming.mybalbnce.utils.MD5Util;
 import com.zhanghuaming.mybalbnce.utils.MySharedPreferences;
 import com.zhanghuaming.mybalbnce.utils.NetWorkBack;
 import com.zhanghuaming.mybalbnce.utils.NetworkImageHolderView;
 import com.zhanghuaming.mybalbnce.utils.PhoneInfoUtils;
 import com.zhanghuaming.mybalbnce.serial.SerialBack;
+import com.zhanghuaming.mybalbnce.utils.SoundUtils;
 import com.zhanghuaming.mybalbnce.utils.UpdateApk;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-
 import okhttp3.ResponseBody;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
-import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 
-public class MainActivity extends Activity implements SerialBack {
+public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private ImageView ivAnima;
     private SimpleDraweeView ivQRCode;
     private TextView tvAutoCode, tvTip1, tvTip2, tvCode, tvTime, tvNet;
     private FrameAnimation frameAnimation;//动态
     private boolean isLoging = false;//是否登录
-    private UartClient client;//串口
+    private UartClientNew client;//串口
     private String doweTime;
     private int stateNow = 0;
+    private int lowWight = 6;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,32 +77,29 @@ public class MainActivity extends Activity implements SerialBack {
                 | View.SYSTEM_UI_FLAG_IMMERSIVE);
         setContentView(R.layout.activity_main);
         initView();
+        checkUpdate();
         PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(MainActivity.this);
         if (phoneInfoUtils.getIccid() != null) {
             MySharedPreferences.save(MainActivity.this, MySharedPreferences.DevCode, phoneInfoUtils.getICCID().substring(0, phoneInfoUtils.getICCID().length() - 1));
         }
-        if(RetrofixHelper.isNetworkConnected(MainActivity.this)){
+        if (RetrofixHelper.isNetworkConnected(MainActivity.this)) {
             login();
-            tvNet.setVisibility(View.VISIBLE);
             tvNet.setText("当前已联网");
         }
         NetReceiver.setBack(new NetWorkBack() {
             @Override
             public void noNetwork() {
-                tvNet.setVisibility(View.VISIBLE);
                 tvNet.setText("当前无网络");
             }
 
             @Override
             public void wifiConnected() {
-                tvNet.setVisibility(View.VISIBLE);
                 tvNet.setText("当前为wifi联网");
                 login();
             }
 
             @Override
             public void mobileConnected() {
-                tvNet.setVisibility(View.VISIBLE);
                 tvNet.setText("当前为移动联网");
                 login();
             }
@@ -120,7 +113,126 @@ public class MainActivity extends Activity implements SerialBack {
         } catch (Exception ee) {
             ee.printStackTrace();
         }
+        client = UartClientNew.getInstance(new SerialBack() {
+            @Override
+            public void sInstabilityPeople(double result) {
+                if (stateNow == 0 && result > lowWight) {
+                    havePeople();
+                } else if (stateNow == SerialBack.sIS_SHOWING_AUTOCODE && result == 0) {
+                    Log.i(TAG, "stateNow---222---" + stateNow);
+                    tvTip2.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            backBegin(0);
+                        }
+                    }, 6000);
 
+                } else if (result == 0 && stateNow != SerialBack.sIS_SHOWING_AUTOCODE && stateNow != SerialBack.sIS_BODY_ERROR) {
+                    Log.i(TAG, "no people no wait" + stateNow);
+                    backBegin(0);
+                }
+            }
+
+
+            @Override
+            public void sNoPeople() {
+
+            }
+
+            @Override
+            public void sAfterSettingCloseTime() {
+
+            }
+
+            @Override
+            public void sInSetingCloseTime() {
+
+            }
+
+
+            @Override
+            public void sHaveweight(final double weight) {
+                if (stateNow == SerialBack.sIS_HAVING_PEOPLE) {
+                    //播放
+                    // SoundUtils soundUtils = SoundUtils.getInstance();
+                    //soundUtils.playFatSound();//播放声音
+                    stateNow = SerialBack.sIS_HAVING_WEIGHT;
+                    Log.i(TAG, "stateNow------------------" + stateNow);
+                    nowWeight = weight;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            tvTip1.setText("体重测量完成");
+                            tvTip2.setText("双手测试体脂");
+                        }
+                    });
+                    //    sendWeightFat(nowWeight, 780.0);//测试
+                }
+
+            }
+
+
+            @Override
+            public void sBeginBodyfat(double fat) {
+                if (stateNow == SerialBack.sIS_HAVING_WEIGHT) {
+                    stateNow = SerialBack.sIS_BEGIN_BODY_FAT;
+                    Log.i(TAG, "stateNow--------------------------------------" + stateNow);
+                }
+            }
+
+            double nowWeight = 0;
+
+            @Override
+            public void sHaveBodyfat(final double fat) {
+                if (stateNow == SerialBack.sIS_HAVING_WEIGHT || stateNow == SerialBack.sIS_BEGIN_BODY_FAT) {
+                    stateNow = SerialBack.sIS_BODY_FAT;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "阻抗stateNow-------------------" + fat + "---------" + stateNow, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                    sendWeightFat(nowWeight, fat);
+//                } else {
+//                    runOnUiThread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            Toast.makeText(MainActivity.this, "阻抗stateNow---" + fat + "---------" + stateNow, Toast.LENGTH_SHORT).show();
+//                        }
+//                    });
+                }
+
+            }
+
+            @Override
+            public void sBodyfatError() {
+                stateNow = SerialBack.sIS_BODY_ERROR;
+                //播放
+                // SoundUtils soundUtils = SoundUtils.getInstance();
+                //soundUtils.playFatSound();//播放声音
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (frameAnimation != null && !frameAnimation.isPause()) {
+                            frameAnimation.pauseAnimation();
+                            frameAnimation.release();
+                        }
+                        ivAnima.setVisibility(View.VISIBLE);
+                        tvAutoCode.setVisibility(View.INVISIBLE);
+                        tvTip1.setText("体脂测试失败");
+                        tvTip2.setText("重新测试");
+                        tvTime.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                backBegin(0);
+                            }
+                        }, 6000);
+
+                    }
+                });
+            }
+        });
+        client.start();//打开串口
     }
 
     void login() {
@@ -173,7 +285,6 @@ public class MainActivity extends Activity implements SerialBack {
             Toast.makeText(MainActivity.this, "没有登录信息", Toast.LENGTH_SHORT).show();
             Intent i = new Intent(MainActivity.this, SettingActivity.class);
             startActivity(i);
-
             finish();
         }
         checkUpdateService();
@@ -183,7 +294,7 @@ public class MainActivity extends Activity implements SerialBack {
     protected void onResume() {
         super.onResume();
         doweTime = MySharedPreferences.get(MainActivity.this, MySharedPreferences.DOWNTIME);
-        client = UartClient.getInstance(this);
+
     }
 
 
@@ -198,7 +309,7 @@ public class MainActivity extends Activity implements SerialBack {
 
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("MSG_CHECK_UPDATESERVICE start fail");
+            Log.e(TAG, "MSG_CHECK_UPDATESERVICE start fail");
         }
     }
 
@@ -214,13 +325,14 @@ public class MainActivity extends Activity implements SerialBack {
     }
 
     void havePeople() {
-        stateNow = SerialBack.sISHAVINGPEOPLE;
+        stateNow = SerialBack.sIS_HAVING_PEOPLE;
+        Log.i(TAG, "stateNow-" + stateNow);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 frameAnimation = new FrameAnimation(ivAnima, getRes(), 500, true);
-                // SoundUtils soundUtils = SoundUtils.getInstance();
-                //soundUtils.playSound();//播放声音
+                SoundUtils soundUtils = SoundUtils.getInstance();
+                soundUtils.playFocusSound();//播放声音
                 tvAutoCode.setVisibility(View.INVISIBLE);
                 ivQRCode.setVisibility(View.VISIBLE);
                 tvTip1.setText("正在测量中");
@@ -230,8 +342,8 @@ public class MainActivity extends Activity implements SerialBack {
     }
 
 
-    void sendWeight(double weight) {
-        stateNow = SerialBack.sISHAVINGWEIGHT;
+    void sendWeightFat(double weight, double fat) {
+
         byte[] buf = new byte[8];
         buf[0] = (byte) 0XFF;
         buf[1] = (byte) 0X03;
@@ -242,12 +354,12 @@ public class MainActivity extends Activity implements SerialBack {
         buf[6] = (byte) 0X00;
         buf[7] = (byte) 0XFE;
         client.sendMsg(buf);
-        Observable<SendWeightBack> back = RetrofixHelper.sendWeight(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), weight);
+        Observable<SendWeightBack> back = RetrofixHelper.sendWeight(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), weight, fat);
         back.doOnNext(new Action1<SendWeightBack>() {
             @Override
             public void call(SendWeightBack responseBody) {
                 // SoundUtils soundUtils = SoundUtils.getInstance();
-                //soundUtils.playSound();//播放声音
+                //soundUtils.playInputSound();//播放声音
                 byte[] buf = new byte[8];
                 buf[0] = (byte) 0XFF;
                 buf[1] = (byte) 0X01;
@@ -280,11 +392,11 @@ public class MainActivity extends Activity implements SerialBack {
     }
 
     void sendWeightBack(String autoCode) {//发送体重信息到服务器后返回
-        stateNow = SerialBack.sISSHOWINGAUTOCODE;
+        stateNow = SerialBack.sIS_SHOWING_AUTOCODE;
+        Log.i(TAG, "stateNow-===-" + stateNow);
         if (frameAnimation != null && !frameAnimation.isPause()) {
             frameAnimation.pauseAnimation();
             frameAnimation.release();
-            frameAnimation = null;
         }
         ivAnima.setVisibility(View.INVISIBLE);
         tvAutoCode.setVisibility(View.VISIBLE);
@@ -293,22 +405,22 @@ public class MainActivity extends Activity implements SerialBack {
         tvTip2.setText("免费查看体重");
     }
 
-    void backBegin() {//恢复没人界面
+    void backBegin(int time) {//恢复没人界面
         stateNow = 0;
+        Log.i(TAG, "stateNow-++++-" + stateNow);
         tvTip2.postDelayed(new Runnable() {
             @Override
             public void run() {
                 if (frameAnimation != null && !frameAnimation.isPause()) {
                     frameAnimation.pauseAnimation();
                     frameAnimation.release();
-                    frameAnimation = null;
                 }
                 ivAnima.setVisibility(View.VISIBLE);
                 tvAutoCode.setVisibility(View.INVISIBLE);
                 tvTip1.setText("微信扫描关注");
                 tvTip2.setText("体重数据自己知");
             }
-        }, 3000);
+        }, time);
     }
 
     void initView() {
@@ -317,19 +429,19 @@ public class MainActivity extends Activity implements SerialBack {
         ivAnima.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                havePeople();
-                tvTime.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        sendWeight(82.16);
-                        tvTime.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                backBegin();
-                            }
-                        }, 6000 * 2);
-                    }
-                }, 6000 * 2);
+//                havePeople();
+//                tvTime.postDelayed(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        sendWeightFat(82.16, 12.1);
+//                        tvTime.postDelayed(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                backBegin(6000);
+//                            }
+//                        }, 6000 * 2);
+//                    }
+//                }, 6000 * 2);
             }
         });
         ivQRCode = (SimpleDraweeView) findViewById(R.id.iv_qrcode);
@@ -341,40 +453,44 @@ public class MainActivity extends Activity implements SerialBack {
         ivQRCode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Observable<ResponseBody> back = RetrofixHelper.getUpdate(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), UpdateApk.getAppInfo_BySelf(MainActivity.this).appName);
-                back.subscribe(new Subscriber<ResponseBody>() {
-                    @Override
-                    public void onCompleted() {
-
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-
-                    }
-
-                    @Override
-                    public void onNext(ResponseBody responseBody) {
-                        try {
-                            String s = responseBody.string();
-                            Log.i(TAG, "responBody for update ----" + s);
-                            Update.sendMsg(MainActivity.this, s);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
+                checkUpdate();
             }
         });
         tvNet = (TextView) findViewById(R.id.tv_net);
     }
 
+    void checkUpdate() {
+        Observable<ResponseBody> back = RetrofixHelper.getUpdate(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), UpdateApk.getAppInfo_BySelf(MainActivity.this).appName);
+        back.subscribe(new Subscriber<ResponseBody>() {
+            @Override
+            public void onCompleted() {
+            }
+
+            @Override
+            public void onError(Throwable e) {
+            }
+
+            @Override
+            public void onNext(ResponseBody responseBody) {
+                try {
+                    String s = responseBody.string();
+                    Log.i(TAG, "responBody for update ----" + s);
+                    Update.sendMsg(MainActivity.this, s);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
     private ConvenientBanner convenientBanner;
-    private List<BannerItem> bannerItems = new ArrayList<>();
+    private List<BannerItem> bannerItems;
     private List<String> webPathList;//每张图片的绝对地址
 
     void addWebPicture(List<String> webPictureAddr) {//添加轮播图
         webPathList = webPictureAddr;
+        bannerItems = null;
+        bannerItems = new ArrayList<>();
         for (int i = 0; i < webPathList.size(); i++) {
             bannerItems.add(new BannerItem("", webPathList.get(i)));
         }
@@ -410,32 +526,28 @@ public class MainActivity extends Activity implements SerialBack {
         return resId;
     }
 
-    private int stateTITO = 0;//状态计数
+
     private int localState = 0;//保存状态
 
     void beginTimeShow() {
-        Observable.interval(0, 1, TimeUnit.SECONDS)//
-                .observeOn(Schedulers.newThread())
-                .subscribe(new Action1<Long>() {
-                    @Override
-                    public void call(Long aLong) {
-                        if (stateTITO == 0) {
-                            localState = stateNow;
-                        }
-
-                        if (stateNow == localState && stateNow != 0) {
-                            if (stateTITO <= 30) {
-                                stateTITO++;
-                            } else {
-                                stateTITO = 0;
-                                localState = 0;
-                                backBegin();
-                            }
-                        } else {
-                            stateTITO = 0;
-                        }
-                    }
-                });
+//        Observable.interval(0, 1, TimeUnit.SECONDS)//状态复位
+//                .observeOn(Schedulers.newThread())
+//                .subscribe(new Action1<Long>() {
+//                    @Override
+//                    public void call(Long aLong) {
+//                        if (aLong % 30 == 0) {
+//                            if (localState == stateNow&&stateNow !=0) {
+//                                runOnUiThread(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        Toast.makeText(MainActivity.this,"stateNow"+stateNow,Toast.LENGTH_SHORT).show();
+//                                    }
+//                                });
+//                            }
+//                            localState =stateNow;
+//                        }
+//                    }
+//                });
         Observable.interval(0, 1, TimeUnit.MINUTES)//时间显示，关机，重新登录
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Long>() {
@@ -461,37 +573,10 @@ public class MainActivity extends Activity implements SerialBack {
                             buf[7] = (byte) 0XFE;
                             client.sendMsg(buf);
                         } else {
-                            Log.i(TAG, "" + ftd.format(dNow) + "------" + doweTime);
+                            Log.i(TAG, "关机时间对比" + ftd.format(dNow) + "------" + doweTime);
                         }
                     }
                 });
-    }
-
-
-    @Override
-    public void sHavePeople() {
-        havePeople();
-    }
-
-    @Override
-    public void sHaveweight(double weight) {
-        sendWeight(weight);
-    }
-
-    @Override
-    public void sNoPeople() {
-        stateNow = 0;
-        backBegin();
-    }
-
-    @Override
-    public void sAfterSettingCloseTime() {
-
-    }
-
-    @Override
-    public void sInSetingCloseTime() {
-
     }
 
 

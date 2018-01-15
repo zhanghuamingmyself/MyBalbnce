@@ -26,8 +26,7 @@ public class Update {
 
         String updatePackageName = "com.zhanghuaming.mybalbnce";
         String updateActivityName = "MainActivity";
-        Intent intent = new Intent(
-                "com.zhanghuaming.upgrade.Update");
+        Intent intent = new Intent("com.zhanghuaming.upgrade.Update");
         intent.putExtra("UpdateBean", beanJson);
         Log.i(TAG,"send bean----"+beanJson);
         intent.putExtra("updatePackageName", updatePackageName);

@@ -90,11 +90,15 @@
             </RelativeLayout>
 
             <View
+                android:layout_marginLeft="5dp"
+                android:layout_marginRight="5dp"
                 android:layout_marginTop="15dp"
                 android:layout_width="match_parent"
-                android:layout_height="2dp"
+                android:layout_height="5dp"
                 android:background="#FFF"></View>
             <View
+                android:layout_marginLeft="5dp"
+                android:layout_marginRight="5dp"
                 android:layout_marginTop="5dp"
                 android:layout_width="match_parent"
                 android:layout_height="2dp"
@@ -111,7 +115,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="50dp"
+                    android:layout_marginTop="40dp"
                     android:gravity="center_horizontal"
                     android:text="微信扫描关注"
                     android:textSize="30sp" />
@@ -128,14 +132,18 @@
                     android:textSize="30sp" />
             </LinearLayout>
         <View
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
             android:layout_marginBottom="5dp"
             android:layout_width="match_parent"
             android:layout_height="2dp"
             android:background="#FFF"></View>
         <View
-            android:layout_marginBottom="25dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:layout_marginBottom="5dp"
             android:layout_width="match_parent"
-            android:layout_height="2dp"
+            android:layout_height="5dp"
             android:background="#FFF"></View>
 
         <TextView
@@ -146,7 +154,7 @@
             android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp"
             android:layout_gravity="center_horizontal"
-            android:text="网络状态"/>
+            android:text="无网络状态"/>
         </LinearLayout>
 
 </LinearLayout>

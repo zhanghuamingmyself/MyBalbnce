@@ -18,6 +18,7 @@ import com.zhanghuaming.mybalbnce.serial.UartClient;
 import com.zhanghuaming.mybalbnce.utils.MySharedPreferences;
 import com.zhanghuaming.mybalbnce.serial.SerialBack;
 import com.zhanghuaming.mybalbnce.utils.PhoneInfoUtils;
+import com.zhanghuaming.mybalbnce.utils.SoundUtils;
 import com.zhanghuaming.mybalbnce.utils.UpdateApk;
 
 import java.io.File;
@@ -47,6 +48,8 @@ public class SettingActivity extends AppCompatActivity implements SerialBack {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_setting);
+//         SoundUtils soundUtils = SoundUtils.getInstance();
+//        soundUtils.playFatSound();//播放声音
         btnOut = (Button) findViewById(R.id.btn_out);
         btnTime = (Button) findViewById(R.id.btn_time);
         timePickerDown = (TimePicker) findViewById(R.id.timePickerDown);
@@ -133,7 +136,7 @@ public class SettingActivity extends AppCompatActivity implements SerialBack {
     }
 
     @Override
-    public void sHavePeople() {
+    public void sInstabilityPeople(double result) {
 
     }
 
@@ -181,6 +184,22 @@ public class SettingActivity extends AppCompatActivity implements SerialBack {
         buf[7] = (byte) 0XFE;
         client.sendMsg(buf);
     }
+
+    @Override
+    public void sBeginBodyfat(double fat) {
+
+    }
+
+    @Override
+    public void sHaveBodyfat(double fat) {
+
+    }
+
+    @Override
+    public void sBodyfatError() {
+
+    }
+
 
     void firstUpgradeApk() {
         int apk_res_id = R.raw.upgrade_apk;

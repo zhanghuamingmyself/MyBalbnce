@@ -41,8 +41,8 @@ public class RetrofixHelper {
         return MyApplication.getApplication().checkRetrofix().login(username,longitude,latitude,imsi).subscribeOn(Schedulers.io());
     }
 
-    public static Observable<SendWeightBack> sendWeight(String number, double weight) {
-        return MyApplication.getApplication().checkRetrofix().sendWeight(number, weight).subscribeOn(Schedulers.io());
+    public static Observable<SendWeightBack> sendWeight(String number, double weight,double fat) {
+        return MyApplication.getApplication().checkRetrofix().sendWeight(number, weight,fat).subscribeOn(Schedulers.io());
     }
 
     public static boolean isNetworkConnected(Context context) {
