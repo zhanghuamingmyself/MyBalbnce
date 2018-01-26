@@ -13,14 +13,14 @@
         android:id="@+id/convenientBanner"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="4"
+        android:layout_weight="75"
         android:background="@color/colorPrimary"
         app:canLoop="true" />
 
     <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:layout_weight="25"
             android:orientation="vertical"
             android:background="#495286">
 
@@ -57,8 +57,8 @@
 
                 <com.facebook.drawee.view.SimpleDraweeView
                     android:id="@+id/iv_qrcode"
-                    android:layout_width="210dp"
-                    android:layout_height="210dp"
+                    android:layout_width="225dp"
+                    android:layout_height="225dp"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="30dp"
                     fresco:placeholderImage="@mipmap/ic_launcher" />
@@ -71,6 +71,8 @@
                 android:layout_weight="3">
 
                 <ImageView
+                    android:layout_marginLeft="5dp"
+                    android:layout_marginRight="5dp"
                     android:id="@+id/iv_anima"
                     android:layout_width="match_parent"
                     android:layout_height="190dp"
@@ -84,8 +86,9 @@
                     android:layout_height="wrap_content"
                     android:layout_centerInParent="true"
                     android:text="1234(验证码)"
-                    android:textSize="25sp"
-                    android:visibility="invisible" />
+                    android:textSize="40sp"
+                    android:visibility="invisible"
+                    android:textColor="#FFF"/>
 
             </RelativeLayout>
 

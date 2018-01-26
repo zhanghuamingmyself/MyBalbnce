@@ -20,6 +20,7 @@ import com.bigkoo.convenientbanner.listener.OnItemClickListener;
 import com.facebook.drawee.view.SimpleDraweeView;
 import com.zhanghuaming.mybalbnce.bean.LoginBack;
 import com.zhanghuaming.mybalbnce.bean.SendWeightBack;
+import com.zhanghuaming.mybalbnce.bean.UpdateBean;
 import com.zhanghuaming.mybalbnce.http.RetrofixHelper;
 import com.zhanghuaming.mybalbnce.serial.UartClient;
 import com.zhanghuaming.mybalbnce.serial.UartClientNew;
@@ -59,7 +60,9 @@ public class MainActivity extends Activity {
     private UartClientNew client;//串口
     private String doweTime;
     private int stateNow = 0;
-    private int lowWight = 6;
+    private int lowWight = 2;
+    private boolean havePeople = false;//当前是否有人在上面，只是解决现实二维码后紧接着使用的界面显示问题
+    private double weightNow = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,9 +119,13 @@ public class MainActivity extends Activity {
         client = UartClientNew.getInstance(new SerialBack() {
             @Override
             public void sInstabilityPeople(double result) {
+                weightNow = result;
                 if (stateNow == 0 && result > lowWight) {
+                    havePeople = true;
+                    stateNow = SerialBack.sIS_HAVING_PEOPLE;
                     havePeople();
-                } else if (stateNow == SerialBack.sIS_SHOWING_AUTOCODE && result == 0) {
+                } else if (stateNow == SerialBack.sIS_SHOWING_AUTOCODE && result == 0 && havePeople) {
+                    havePeople = false;
                     Log.i(TAG, "stateNow---222---" + stateNow);
                     tvTip2.postDelayed(new Runnable() {
                         @Override
@@ -127,8 +134,16 @@ public class MainActivity extends Activity {
                         }
                     }, 6000);
 
+                } else if (stateNow == SerialBack.sIS_SHOWING_AUTOCODE && result > 0 && !havePeople) {
+                    havePeople = true;
+                    havePeople();
+                } else if (stateNow == SerialBack.sIS_BODY_ERROR && result > 0 && !havePeople) {
+                    havePeople = true;
+                    havePeople();
                 } else if (result == 0 && stateNow != SerialBack.sIS_SHOWING_AUTOCODE && stateNow != SerialBack.sIS_BODY_ERROR) {
                     Log.i(TAG, "no people no wait" + stateNow);
+                    havePeople = false;
+                    SoundUtils.getInstance().stopSound();
                     backBegin(0);
                 }
             }
@@ -152,24 +167,25 @@ public class MainActivity extends Activity {
 
             @Override
             public void sHaveweight(final double weight) {
-                if (stateNow == SerialBack.sIS_HAVING_PEOPLE) {
-                    //播放
-                    // SoundUtils soundUtils = SoundUtils.getInstance();
-                    //soundUtils.playFatSound();//播放声音
-                    stateNow = SerialBack.sIS_HAVING_WEIGHT;
-                    Log.i(TAG, "stateNow------------------" + stateNow);
-                    nowWeight = weight;
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            tvTip1.setText("体重测量完成");
-                            tvTip2.setText("双手测试体脂");
-                        }
-                    });
-                    //    sendWeightFat(nowWeight, 780.0);//测试
-                }
-
+                //           if (stateNow == SerialBack.sIS_HAVING_PEOPLE) {
+                //播放
+                SoundUtils soundUtils = SoundUtils.getInstance();
+                soundUtils.stopSound();
+                soundUtils.playbeginFatSound();//播放声音
+                stateNow = SerialBack.sIS_HAVING_WEIGHT;
+                Log.i(TAG, "stateNow------------------" + stateNow);
+                nowWeight = weight;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        tvTip1.setText("体重测量完成");
+                        tvTip2.setText("双手测试体脂");
+                    }
+                });
+                //    sendWeightFat(nowWeight, 780.0);//测试
             }
+
+            //        }
 
 
             @Override
@@ -184,15 +200,15 @@ public class MainActivity extends Activity {
 
             @Override
             public void sHaveBodyfat(final double fat) {
-                if (stateNow == SerialBack.sIS_HAVING_WEIGHT || stateNow == SerialBack.sIS_BEGIN_BODY_FAT) {
-                    stateNow = SerialBack.sIS_BODY_FAT;
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Toast.makeText(MainActivity.this, "阻抗stateNow-------------------" + fat + "---------" + stateNow, Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                    sendWeightFat(nowWeight, fat);
+                //               if (stateNow == SerialBack.sIS_HAVING_WEIGHT || stateNow == SerialBack.sIS_BEGIN_BODY_FAT) {
+                stateNow = SerialBack.sIS_BODY_FAT;
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this, "阻抗stateNow-------------------" + fat + "---------" + stateNow, Toast.LENGTH_SHORT).show();
+                    }
+                });
+                sendWeightFat(nowWeight, fat);
 //                } else {
 //                    runOnUiThread(new Runnable() {
 //                        @Override
@@ -200,19 +216,20 @@ public class MainActivity extends Activity {
 //                            Toast.makeText(MainActivity.this, "阻抗stateNow---" + fat + "---------" + stateNow, Toast.LENGTH_SHORT).show();
 //                        }
 //                    });
-                }
-
             }
+
+            //        }
 
             @Override
             public void sBodyfatError() {
                 stateNow = SerialBack.sIS_BODY_ERROR;
                 //播放
-                // SoundUtils soundUtils = SoundUtils.getInstance();
-                //soundUtils.playFatSound();//播放声音
+                SoundUtils soundUtils = SoundUtils.getInstance();
+                soundUtils.playFatSound();//播放声音
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+
                         if (frameAnimation != null && !frameAnimation.isPause()) {
                             frameAnimation.pauseAnimation();
                             frameAnimation.release();
@@ -233,6 +250,11 @@ public class MainActivity extends Activity {
             }
         });
         client.start();//打开串口
+        frameAnimation = new FrameAnimation(ivAnima, getRes(), 500, true);
+        if (frameAnimation != null && !frameAnimation.isPause()) {
+            frameAnimation.pauseAnimation();
+            frameAnimation.release();
+        }
     }
 
     void login() {
@@ -253,7 +275,7 @@ public class MainActivity extends Activity {
                 @Override
                 public void onNext(LoginBack loginBack) {
                     Log.i(TAG, "json---" + loginBack.toString());
-                    if (loginBack.getStatus() == 1) {
+                    if (loginBack.getStatus() == 0) {
                         isLoging = true;
                         MySharedPreferences.save(MainActivity.this, MySharedPreferences.LOGINBACK, MyApplication.getApplication().getGson().toJson(loginBack));
                         if (LocalHelper.mLocationClient.isStarted()) {
@@ -330,11 +352,16 @@ public class MainActivity extends Activity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                frameAnimation = new FrameAnimation(ivAnima, getRes(), 500, true);
+                tvAutoCode.setVisibility(View.INVISIBLE);
+                ivAnima.setVisibility(View.VISIBLE);
+                if (frameAnimation != null) {
+                    frameAnimation.restartAnimation();
+                } else {
+                    frameAnimation = new FrameAnimation(ivAnima, getRes(), 500, true);
+                }
                 SoundUtils soundUtils = SoundUtils.getInstance();
                 soundUtils.playFocusSound();//播放声音
-                tvAutoCode.setVisibility(View.INVISIBLE);
-                ivQRCode.setVisibility(View.VISIBLE);
+
                 tvTip1.setText("正在测量中");
                 tvTip2.setText("请保持平衡");
             }
@@ -342,8 +369,13 @@ public class MainActivity extends Activity {
     }
 
 
-    void sendWeightFat(double weight, double fat) {
-
+    void sendWeightFat(final double weight, final double fat) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "正在上传" + weight + "体重" + fat, Toast.LENGTH_SHORT).show();
+            }
+        });
         byte[] buf = new byte[8];
         buf[0] = (byte) 0XFF;
         buf[1] = (byte) 0X03;
@@ -358,8 +390,8 @@ public class MainActivity extends Activity {
         back.doOnNext(new Action1<SendWeightBack>() {
             @Override
             public void call(SendWeightBack responseBody) {
-                // SoundUtils soundUtils = SoundUtils.getInstance();
-                //soundUtils.playInputSound();//播放声音
+                SoundUtils soundUtils = SoundUtils.getInstance();
+                soundUtils.playInputSound();//播放声音
                 byte[] buf = new byte[8];
                 buf[0] = (byte) 0XFF;
                 buf[1] = (byte) 0X01;
@@ -380,18 +412,22 @@ public class MainActivity extends Activity {
 
             @Override
             public void onError(Throwable e) {
-                e.printStackTrace();
+                Toast.makeText(MainActivity.this, "上传体重错误--" + e.getMessage(), Toast.LENGTH_LONG).show();
             }
 
             @Override
             public void onNext(SendWeightBack responseBody) {
-                Log.i(TAG, "体重返回" + responseBody.toString());
-                sendWeightBack(responseBody.msg);
+                Log.i(TAG, "服务器返回" + responseBody.toString());
+                if (responseBody.status == 0) {
+                    sendWeightFatBack(responseBody.msg);
+                } else {
+                    Toast.makeText(MainActivity.this, "服务器返回" + responseBody.status, Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }
 
-    void sendWeightBack(String autoCode) {//发送体重信息到服务器后返回
+    void sendWeightFatBack(String autoCode) {//发送体重信息到服务器后返回
         stateNow = SerialBack.sIS_SHOWING_AUTOCODE;
         Log.i(TAG, "stateNow-===-" + stateNow);
         if (frameAnimation != null && !frameAnimation.isPause()) {
@@ -402,25 +438,28 @@ public class MainActivity extends Activity {
         tvAutoCode.setVisibility(View.VISIBLE);
         tvAutoCode.setText(autoCode + "(验证码)");
         tvTip1.setText("输入验证码");
-        tvTip2.setText("免费查看体重");
+        tvTip2.setText("查看体重体脂");
     }
 
     void backBegin(int time) {//恢复没人界面
         stateNow = 0;
         Log.i(TAG, "stateNow-++++-" + stateNow);
-        tvTip2.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (frameAnimation != null && !frameAnimation.isPause()) {
-                    frameAnimation.pauseAnimation();
-                    frameAnimation.release();
+        if (weightNow == 0) {
+            tvTip2.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (frameAnimation != null && !frameAnimation.isPause()) {
+                        frameAnimation.pauseAnimation();
+                        frameAnimation.release();
+                    }
+                    ivAnima.setVisibility(View.VISIBLE);
+                    tvAutoCode.setVisibility(View.INVISIBLE);
+                    tvTip1.setText("微信扫描关注");
+                    tvTip2.setText("体重数据自己知");
                 }
-                ivAnima.setVisibility(View.VISIBLE);
-                tvAutoCode.setVisibility(View.INVISIBLE);
-                tvTip1.setText("微信扫描关注");
-                tvTip2.setText("体重数据自己知");
-            }
-        }, time);
+            }, time);
+        }
+
     }
 
     void initView() {
@@ -453,7 +492,7 @@ public class MainActivity extends Activity {
         ivQRCode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                checkUpdate();
+                login();
             }
         });
         tvNet = (TextView) findViewById(R.id.tv_net);
@@ -475,7 +514,11 @@ public class MainActivity extends Activity {
                 try {
                     String s = responseBody.string();
                     Log.i(TAG, "responBody for update ----" + s);
-                    Update.sendMsg(MainActivity.this, s);
+                    if (MyApplication.getApplication().getGson().fromJson(s, UpdateBean.class).status == 0) {
+                        Update.sendMsg(MainActivity.this, s);
+                    } else {
+
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -559,22 +602,22 @@ public class MainActivity extends Activity {
                         Date dNow = new Date();
                         SimpleDateFormat ft = new SimpleDateFormat("yyyy/MM/dd ' ' HH:mm");
                         tvTime.setText("" + ft.format(dNow));
-                        SimpleDateFormat ftd = new SimpleDateFormat("HH:mm");
-                        if (ftd.format(dNow).equals(doweTime)) {
-                            Log.i(TAG, "匹配");
-                            byte[] buf = new byte[8];
-                            buf[0] = (byte) 0XFF;
-                            buf[1] = (byte) 0X08;
-                            buf[2] = (byte) 0X00;
-                            buf[3] = (byte) 0X00;
-                            buf[4] = (byte) 0X00;
-                            buf[5] = (byte) 0X00;
-                            buf[6] = (byte) 0X00;
-                            buf[7] = (byte) 0XFE;
-                            client.sendMsg(buf);
-                        } else {
-                            Log.i(TAG, "关机时间对比" + ftd.format(dNow) + "------" + doweTime);
-                        }
+//                        SimpleDateFormat ftd = new SimpleDateFormat("HH:mm");
+//                        if (ftd.format(dNow).equals(doweTime)) {
+//                            Log.i(TAG, "匹配");
+//                            byte[] buf = new byte[8];
+//                            buf[0] = (byte) 0XFF;
+//                            buf[1] = (byte) 0X08;
+//                            buf[2] = (byte) 0X00;
+//                            buf[3] = (byte) 0X00;
+//                            buf[4] = (byte) 0X00;
+//                            buf[5] = (byte) 0X00;
+//                            buf[6] = (byte) 0X00;
+//                            buf[7] = (byte) 0XFE;
+//                            client.sendMsg(buf);
+//                        } else {
+//                            Log.i(TAG, "关机时间对比" + ftd.format(dNow) + "------" + doweTime);
+//                        }
                     }
                 });
     }

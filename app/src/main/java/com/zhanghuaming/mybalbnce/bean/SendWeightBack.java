@@ -5,7 +5,7 @@ package com.zhanghuaming.mybalbnce.bean;
  */
 
 public class SendWeightBack {
-    public String status;
+    public int status;
     public String msg;
 
     @Override
