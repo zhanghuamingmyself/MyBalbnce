@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,6 +54,7 @@ import rx.schedulers.Schedulers;
 public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getSimpleName();
     private ImageView ivAnima;
+    private LinearLayout tv_yzm;
     private SimpleDraweeView ivQRCode;
     private TextView tvAutoCode, tvTip1, tvTip2, tvCode, tvTime, tvNet;
     private FrameAnimation frameAnimation;//动态
@@ -87,23 +89,23 @@ public class MainActivity extends Activity {
         }
         if (RetrofixHelper.isNetworkConnected(MainActivity.this)) {
             login();
-            tvNet.setText("当前已联网");
+            tvNet.setText("(当前已联网)");
         }
         NetReceiver.setBack(new NetWorkBack() {
             @Override
             public void noNetwork() {
-                tvNet.setText("当前无网络");
+                tvNet.setText("(当前无网络)");
             }
 
             @Override
             public void wifiConnected() {
-                tvNet.setText("当前为wifi联网");
+                tvNet.setText("(当前为wifi联网)");
                 login();
             }
 
             @Override
             public void mobileConnected() {
-                tvNet.setText("当前为移动联网");
+                tvNet.setText("(当前为移动联网)");
                 login();
             }
         });
@@ -179,7 +181,7 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
                         tvTip1.setText("体重测量完成");
-                        tvTip2.setText("双手测试体脂");
+                        tvTip2.setText("握扶手测脂肪");
                     }
                 });
                 //    sendWeightFat(nowWeight, 780.0);//测试
@@ -202,12 +204,12 @@ public class MainActivity extends Activity {
             public void sHaveBodyfat(final double fat) {
                 //               if (stateNow == SerialBack.sIS_HAVING_WEIGHT || stateNow == SerialBack.sIS_BEGIN_BODY_FAT) {
                 stateNow = SerialBack.sIS_BODY_FAT;
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, "阻抗stateNow-------------------" + fat + "---------" + stateNow, Toast.LENGTH_SHORT).show();
-                    }
-                });
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        Toast.makeText(MainActivity.this, "阻抗stateNow-------------------" + fat + "---------" + stateNow, Toast.LENGTH_SHORT).show();
+//                    }
+//                });
                 sendWeightFat(nowWeight, fat);
 //                } else {
 //                    runOnUiThread(new Runnable() {
@@ -225,6 +227,7 @@ public class MainActivity extends Activity {
                 stateNow = SerialBack.sIS_BODY_ERROR;
                 //播放
                 SoundUtils soundUtils = SoundUtils.getInstance();
+                soundUtils.stopSound();
                 soundUtils.playFatSound();//播放声音
                 runOnUiThread(new Runnable() {
                     @Override
@@ -235,9 +238,9 @@ public class MainActivity extends Activity {
                             frameAnimation.release();
                         }
                         ivAnima.setVisibility(View.VISIBLE);
-                        tvAutoCode.setVisibility(View.INVISIBLE);
+                        tv_yzm.setVisibility(View.INVISIBLE);
                         tvTip1.setText("体脂测试失败");
-                        tvTip2.setText("重新测试");
+                        tvTip2.setText("请重新测试");
                         tvTime.postDelayed(new Runnable() {
                             @Override
                             public void run() {
@@ -352,7 +355,7 @@ public class MainActivity extends Activity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                tvAutoCode.setVisibility(View.INVISIBLE);
+                tv_yzm.setVisibility(View.INVISIBLE);
                 ivAnima.setVisibility(View.VISIBLE);
                 if (frameAnimation != null) {
                     frameAnimation.restartAnimation();
@@ -360,9 +363,10 @@ public class MainActivity extends Activity {
                     frameAnimation = new FrameAnimation(ivAnima, getRes(), 500, true);
                 }
                 SoundUtils soundUtils = SoundUtils.getInstance();
+                soundUtils.stopSound();
                 soundUtils.playFocusSound();//播放声音
 
-                tvTip1.setText("正在测量中");
+                tvTip1.setText("体重测量中");
                 tvTip2.setText("请保持平衡");
             }
         });
@@ -370,12 +374,12 @@ public class MainActivity extends Activity {
 
 
     void sendWeightFat(final double weight, final double fat) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "正在上传" + weight + "体重" + fat, Toast.LENGTH_SHORT).show();
-            }
-        });
+//        runOnUiThread(new Runnable() {
+//            @Override
+//            public void run() {
+//                Toast.makeText(MainActivity.this, "正在上传" + weight + "体重" + fat, Toast.LENGTH_SHORT).show();
+//            }
+//        });
         byte[] buf = new byte[8];
         buf[0] = (byte) 0XFF;
         buf[1] = (byte) 0X03;
@@ -391,6 +395,7 @@ public class MainActivity extends Activity {
             @Override
             public void call(SendWeightBack responseBody) {
                 SoundUtils soundUtils = SoundUtils.getInstance();
+                soundUtils.stopSound();
                 soundUtils.playInputSound();//播放声音
                 byte[] buf = new byte[8];
                 buf[0] = (byte) 0XFF;
@@ -413,6 +418,9 @@ public class MainActivity extends Activity {
             @Override
             public void onError(Throwable e) {
                 Toast.makeText(MainActivity.this, "上传体重错误--" + e.getMessage(), Toast.LENGTH_LONG).show();
+                SoundUtils soundUtils = SoundUtils.getInstance();
+                soundUtils.stopSound();
+                soundUtils.playerrorSound();
             }
 
             @Override
@@ -435,10 +443,18 @@ public class MainActivity extends Activity {
             frameAnimation.release();
         }
         ivAnima.setVisibility(View.INVISIBLE);
-        tvAutoCode.setVisibility(View.VISIBLE);
-        tvAutoCode.setText(autoCode + "(验证码)");
+        tv_yzm.setVisibility(View.VISIBLE);
+        String autoCodeString = "";
+        for(int i =0;i<autoCode.length();i++){
+            if(i==autoCode.length()-1) {
+                autoCodeString += autoCode.charAt(i);
+            }else {
+                autoCodeString += autoCode.charAt(i) + " ";
+            }
+        }
+        tvAutoCode.setText(autoCodeString);
         tvTip1.setText("输入验证码");
-        tvTip2.setText("查看体重体脂");
+        tvTip2.setText("接收体脂信息");
     }
 
     void backBegin(int time) {//恢复没人界面
@@ -453,9 +469,9 @@ public class MainActivity extends Activity {
                         frameAnimation.release();
                     }
                     ivAnima.setVisibility(View.VISIBLE);
-                    tvAutoCode.setVisibility(View.INVISIBLE);
-                    tvTip1.setText("微信扫描关注");
-                    tvTip2.setText("体重数据自己知");
+                    tv_yzm.setVisibility(View.INVISIBLE);
+                    tvTip1.setText("微信扫码关注");
+                    tvTip2.setText("免费测试体脂");
                 }
             }, time);
         }
@@ -465,6 +481,7 @@ public class MainActivity extends Activity {
     void initView() {
         convenientBanner = (ConvenientBanner) findViewById(R.id.convenientBanner);
         ivAnima = (ImageView) findViewById(R.id.iv_anima);
+        tv_yzm = (LinearLayout) findViewById(R.id.tv_yzm);
         ivAnima.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -544,7 +561,7 @@ public class MainActivity extends Activity {
                 return new NetworkImageHolderView();
             }
         }, bannerItems)
-                .startTurning(3000)     //设置自动切换（同时设置了切换时间间隔）
+                .startTurning(6000)     //设置自动切换（同时设置了切换时间间隔）
                 .setPageIndicatorAlign(ConvenientBanner.PageIndicatorAlign.CENTER_HORIZONTAL) //设置指示器位置（左、中、右）
                 .setPageIndicator(new int[]{R.drawable.dot_unselected, R.drawable.dot_selected})
                 //  .setManualPageable(true);  //设置手动影响（设置了该项无法手动切换）
@@ -571,26 +588,42 @@ public class MainActivity extends Activity {
 
 
     private int localState = 0;//保存状态
-
+    private int tito = 0;
     void beginTimeShow() {
-//        Observable.interval(0, 1, TimeUnit.SECONDS)//状态复位
-//                .observeOn(Schedulers.newThread())
-//                .subscribe(new Action1<Long>() {
-//                    @Override
-//                    public void call(Long aLong) {
-//                        if (aLong % 30 == 0) {
+        Observable.interval(0, 1, TimeUnit.SECONDS)//状态复位
+                .observeOn(Schedulers.newThread())
+                .subscribe(new Action1<Long>() {
+                    @Override
+                    public void call(Long aLong) {
+//                        if (aLong % 40 == 0) {
 //                            if (localState == stateNow&&stateNow !=0) {
 //                                runOnUiThread(new Runnable() {
 //                                    @Override
 //                                    public void run() {
 //                                        Toast.makeText(MainActivity.this,"stateNow"+stateNow,Toast.LENGTH_SHORT).show();
+//                                        havePeople = false;
+//                                        backBegin(0);
 //                                    }
 //                                });
 //                            }
 //                            localState =stateNow;
 //                        }
-//                    }
-//                });
+                        if (localState == stateNow&&stateNow !=0) {
+                            if(tito <40){
+                                tito++;
+                            }else {
+                                tito=0;
+                                havePeople = false;
+                                backBegin(0);
+                            }
+                        }else if(localState != stateNow&&stateNow !=0){
+                            localState = stateNow;
+                            tito = 0;
+                        }else {
+                            tito = 0;
+                        }
+                    }
+                });
         Observable.interval(0, 1, TimeUnit.MINUTES)//时间显示，关机，重新登录
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Long>() {
