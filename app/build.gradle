@@ -1,6 +1,10 @@
 apply plugin: 'com.android.application'
-
 android {
+    signingConfigs {
+        config {
+            storeFile file('C:/keystore.jks')
+        }
+    }
     compileSdkVersion 22
     buildToolsVersion "26.0.0"
     defaultConfig {
@@ -10,11 +14,15 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable false
         }
     }
     productFlavors {
@@ -41,4 +49,6 @@ dependencies {
     compile 'com.squareup.retrofit2:adapter-rxjava:2.1.0'
     compile 'io.reactivex:rxandroid:1.2.0'
     testCompile 'junit:junit:4.12'
+    compile 'com.tencent.bugly:crashreport_upgrade:latest.release'
+    compile 'com.tencent.bugly:nativecrashreport:latest.release'
 }

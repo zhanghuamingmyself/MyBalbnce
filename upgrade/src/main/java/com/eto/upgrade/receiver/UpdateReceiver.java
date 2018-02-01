@@ -28,7 +28,7 @@ public class UpdateReceiver extends BroadcastReceiver {
         UpdateBean updateBean = gson.fromJson(str, UpdateBean.class);
         Log.i(TAG,"get bean Receiver----"+str);
         Log.i(TAG,"get bean Receiver----"+updateBean.toString());
-        if(updateBean.status!=0) {
+        if(updateBean.status==0) {
             UpdateApk.DownloadAndUpdate(context, updateBean);
             //Toast.makeText(context, StaticCfg.updatePackageName + StaticCfg.updateActivityName + "received" + updateBean.toString(), Toast.LENGTH_SHORT).show();
         }

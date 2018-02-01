@@ -6,6 +6,7 @@ import android.content.Context;
 import com.facebook.drawee.backends.pipeline.Fresco;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.tencent.bugly.crashreport.CrashReport;
 import com.zhanghuaming.mybalbnce.http.RetrofixHelper;
 import com.zhanghuaming.mybalbnce.http.RetrofixServiceInteface;
 import com.zhanghuaming.mybalbnce.serial.UartClient;
@@ -78,6 +79,7 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        CrashReport.initCrashReport(getApplicationContext(), "d43e24331f", false);
         LocalHelper.initGPS(getApplicationContext());
         Fresco.initialize(this);
         gson = new Gson();

@@ -1,5 +1,6 @@
 package com.zhanghuaming.mybalbnce;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -28,6 +29,7 @@ import com.zhanghuaming.mybalbnce.serial.UartClientNew;
 import com.zhanghuaming.mybalbnce.utils.BannerItem;
 import com.zhanghuaming.mybalbnce.utils.CommonUtils;
 import com.zhanghuaming.mybalbnce.utils.FrameAnimation;
+import com.zhanghuaming.mybalbnce.utils.GifView;
 import com.zhanghuaming.mybalbnce.utils.LocalHelper;
 import com.zhanghuaming.mybalbnce.utils.MySharedPreferences;
 import com.zhanghuaming.mybalbnce.utils.NetWorkBack;
@@ -53,11 +55,9 @@ import rx.schedulers.Schedulers;
 
 public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getSimpleName();
-    private ImageView ivAnima;
     private LinearLayout tv_yzm;
     private SimpleDraweeView ivQRCode;
     private TextView tvAutoCode, tvTip1, tvTip2, tvCode, tvTime, tvNet;
-    private FrameAnimation frameAnimation;//动态
     private boolean isLoging = false;//是否登录
     private UartClientNew client;//串口
     private String doweTime;
@@ -66,6 +66,8 @@ public class MainActivity extends Activity {
     private boolean havePeople = false;//当前是否有人在上面，只是解决现实二维码后紧接着使用的界面显示问题
     private double weightNow = 0;
 
+    private GifView gifView;
+    private ImageView gifStop;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,14 +84,9 @@ public class MainActivity extends Activity {
                 | View.SYSTEM_UI_FLAG_IMMERSIVE);
         setContentView(R.layout.activity_main);
         initView();
-        checkUpdate();
         PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(MainActivity.this);
         if (phoneInfoUtils.getIccid() != null) {
             MySharedPreferences.save(MainActivity.this, MySharedPreferences.DevCode, phoneInfoUtils.getICCID().substring(0, phoneInfoUtils.getICCID().length() - 1));
-        }
-        if (RetrofixHelper.isNetworkConnected(MainActivity.this)) {
-            login();
-            tvNet.setText("(当前已联网)");
         }
         NetReceiver.setBack(new NetWorkBack() {
             @Override
@@ -233,11 +230,8 @@ public class MainActivity extends Activity {
                     @Override
                     public void run() {
 
-                        if (frameAnimation != null && !frameAnimation.isPause()) {
-                            frameAnimation.pauseAnimation();
-                            frameAnimation.release();
-                        }
-                        ivAnima.setVisibility(View.VISIBLE);
+                        gifView.setPaused(true);
+                        gifView.setVisibility(View.VISIBLE);
                         tv_yzm.setVisibility(View.INVISIBLE);
                         tvTip1.setText("体脂测试失败");
                         tvTip2.setText("请重新测试");
@@ -253,15 +247,13 @@ public class MainActivity extends Activity {
             }
         });
         client.start();//打开串口
-        frameAnimation = new FrameAnimation(ivAnima, getRes(), 500, true);
-        if (frameAnimation != null && !frameAnimation.isPause()) {
-            frameAnimation.pauseAnimation();
-            frameAnimation.release();
-        }
+        gifView.setPaused(true);
+        gifView.setVisibility(View.INVISIBLE);
     }
 
     void login() {
-        if (MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != null && MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != "null") {
+
+        if (MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != null && MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode) != "null"&& StaticCfg.longitude!=0&&StaticCfg.latitude!=0&&isLoging==false) {
             PhoneInfoUtils phoneInfoUtils = new PhoneInfoUtils(MainActivity.this);
             Log.e(TAG, "手机信息" + "----" + phoneInfoUtils.getProvidersName() + "----" + phoneInfoUtils.getPhoneInfo() + "-----" + phoneInfoUtils.getIccid());
             Observable<LoginBack> back = RetrofixHelper.login(MySharedPreferences.get(MainActivity.this, MySharedPreferences.DevCode), StaticCfg.longitude, StaticCfg.latitude, phoneInfoUtils.getIMSI());
@@ -272,7 +264,6 @@ public class MainActivity extends Activity {
 
                 @Override
                 public void onError(Throwable e) {
-                    Log.e(TAG, e.getMessage());
                 }
 
                 @Override
@@ -285,6 +276,8 @@ public class MainActivity extends Activity {
                             LocalHelper.mLocationClient.stop();
                         }
                         initShow(loginBack);
+                        Toast.makeText(MainActivity.this,"登录成功",Toast.LENGTH_SHORT).show();
+                        checkUpdate();
                     } else {
                         try {
                             String lbString = MySharedPreferences.get(MainActivity.this, MySharedPreferences.LOGINBACK);
@@ -306,11 +299,6 @@ public class MainActivity extends Activity {
                 }
             });
 
-        } else {
-            Toast.makeText(MainActivity.this, "没有登录信息", Toast.LENGTH_SHORT).show();
-            Intent i = new Intent(MainActivity.this, SettingActivity.class);
-            startActivity(i);
-            finish();
         }
         checkUpdateService();
     }
@@ -340,11 +328,13 @@ public class MainActivity extends Activity {
 
 
     void initShow(LoginBack loginBack) {
-        addWebPicture(loginBack.getMsg().getSlideshow());
-        tvCode.setText("设备号:" + loginBack.getMsg().getNumber());
-        if (loginBack.getMsg().getQrCode() != null && !loginBack.getMsg().getQrCode().equals("null")) {
-            Uri uri = Uri.parse(loginBack.getMsg().getQrCode());
-            ivQRCode.setImageURI(uri);
+        if(loginBack!=null&&loginBack.getMsg()!=null) {
+            addWebPicture(loginBack.getMsg().getSlideshow());
+            tvCode.setText("设备号:" + loginBack.getMsg().getNumber());
+            if (loginBack.getMsg().getQrCode() != null && !loginBack.getMsg().getQrCode().equals("null")) {
+                Uri uri = Uri.parse(loginBack.getMsg().getQrCode());
+                ivQRCode.setImageURI(uri);
+            }
         }
         beginTimeShow();//开始显示时间
     }
@@ -352,19 +342,19 @@ public class MainActivity extends Activity {
     void havePeople() {
         stateNow = SerialBack.sIS_HAVING_PEOPLE;
         Log.i(TAG, "stateNow-" + stateNow);
+        SoundUtils soundUtils = SoundUtils.getInstance();
+        soundUtils.stopSound();
+        soundUtils.playFocusSound();//播放声音
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                gifStop.setVisibility(View.INVISIBLE);
                 tv_yzm.setVisibility(View.INVISIBLE);
-                ivAnima.setVisibility(View.VISIBLE);
-                if (frameAnimation != null) {
-                    frameAnimation.restartAnimation();
-                } else {
-                    frameAnimation = new FrameAnimation(ivAnima, getRes(), 500, true);
+                gifView.setVisibility(View.VISIBLE);
+                if(gifView.isPaused()){
+                    gifView.setPaused(false);
                 }
-                SoundUtils soundUtils = SoundUtils.getInstance();
-                soundUtils.stopSound();
-                soundUtils.playFocusSound();//播放声音
+
 
                 tvTip1.setText("体重测量中");
                 tvTip2.setText("请保持平衡");
@@ -438,11 +428,8 @@ public class MainActivity extends Activity {
     void sendWeightFatBack(String autoCode) {//发送体重信息到服务器后返回
         stateNow = SerialBack.sIS_SHOWING_AUTOCODE;
         Log.i(TAG, "stateNow-===-" + stateNow);
-        if (frameAnimation != null && !frameAnimation.isPause()) {
-            frameAnimation.pauseAnimation();
-            frameAnimation.release();
-        }
-        ivAnima.setVisibility(View.INVISIBLE);
+        gifView.setPaused(false);
+        gifView.setVisibility(View.INVISIBLE);
         tv_yzm.setVisibility(View.VISIBLE);
         String autoCodeString = "";
         for(int i =0;i<autoCode.length();i++){
@@ -464,11 +451,9 @@ public class MainActivity extends Activity {
             tvTip2.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    if (frameAnimation != null && !frameAnimation.isPause()) {
-                        frameAnimation.pauseAnimation();
-                        frameAnimation.release();
-                    }
-                    ivAnima.setVisibility(View.VISIBLE);
+                    gifView.setPaused(true);
+                    gifView.setVisibility(View.INVISIBLE);
+                    gifStop.setVisibility(View.VISIBLE);
                     tv_yzm.setVisibility(View.INVISIBLE);
                     tvTip1.setText("微信扫码关注");
                     tvTip2.setText("免费测试体脂");
@@ -480,26 +465,16 @@ public class MainActivity extends Activity {
 
     void initView() {
         convenientBanner = (ConvenientBanner) findViewById(R.id.convenientBanner);
-        ivAnima = (ImageView) findViewById(R.id.iv_anima);
+        gifView = (GifView) findViewById(R.id.iv_anima);
+        gifStop = (ImageView)findViewById(R.id.iv_animastop);
+        gifView.setMovieResource(R.raw.i);
         tv_yzm = (LinearLayout) findViewById(R.id.tv_yzm);
-        ivAnima.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-//                havePeople();
-//                tvTime.postDelayed(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        sendWeightFat(82.16, 12.1);
-//                        tvTime.postDelayed(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                backBegin(6000);
-//                            }
-//                        }, 6000 * 2);
-//                    }
-//                }, 6000 * 2);
-            }
-        });
+//        gifView.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//
+//            }
+//        });
         ivQRCode = (SimpleDraweeView) findViewById(R.id.iv_qrcode);
         tvAutoCode = (TextView) findViewById(R.id.tv_authcode);
         tvTip1 = (TextView) findViewById(R.id.tv_tip1);
@@ -509,7 +484,7 @@ public class MainActivity extends Activity {
         ivQRCode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                login();
+                checkUpdate();
             }
         });
         tvNet = (TextView) findViewById(R.id.tv_net);
@@ -524,6 +499,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onError(Throwable e) {
+                Log.e(TAG,"updataAPP error----"+e.getMessage());
             }
 
             @Override
@@ -575,17 +551,6 @@ public class MainActivity extends Activity {
 
     }
 
-    private int[] getRes() {//获取动画资源
-        TypedArray typedArray = getResources().obtainTypedArray(R.array.ani);
-        int len = typedArray.length();
-        int[] resId = new int[len];
-        for (int i = 0; i < len; i++) {
-            resId[i] = typedArray.getResourceId(i, -1);
-        }
-        typedArray.recycle();
-        return resId;
-    }
-
 
     private int localState = 0;//保存状态
     private int tito = 0;
@@ -629,7 +594,7 @@ public class MainActivity extends Activity {
                 .subscribe(new Action1<Long>() {
                     @Override
                     public void call(Long aLong) {
-                        if (!isLoging && aLong % 5 == 0) {
+                        if (!isLoging) {
                             login();
                         }
                         Date dNow = new Date();
